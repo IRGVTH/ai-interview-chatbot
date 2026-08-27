@@ -2,12 +2,13 @@
   "name": "ai-interview-chatbot",
   "version": "1.0.0",
   "private": true,
+  "packageManager": "pnpm@11.24.0",
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
     "lint": "turbo lint"
   },
   "devDependencies": {
-    "turbo": "^2.x.x"
+    "turbo": "^2.10.12"
   }
 }

@@ -1,0 +1,13 @@
+{
+  "name": "ai-interview-chatbot",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint"
+  },
+  "devDependencies": {
+    "turbo": "^2.x.x"
+  }
+}

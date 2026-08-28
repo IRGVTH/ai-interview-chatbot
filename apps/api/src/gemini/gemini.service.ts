@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { GoogleGenAI } from "@google/genai";
 
 type GeminiModel = "gemini-3.1-flash-lite" | "gemini-3.7-flash";
+type StreamChunk = { text?: string };
 
 @Injectable()
 export class GeminiService {
@@ -66,6 +67,47 @@ export class GeminiService {
     }
 
     console.error("Gemini final error:", lastError);
+    throw new InternalServerErrorException("Gemini request failed");
+  }
+
+  async stream(prompt: string) {
+    const maxAttemptsPerModel = 3;
+    let lastError: unknown;
+
+    for (const model of this.models) {
+      for (let attempt = 1; attempt <= maxAttemptsPerModel; attempt++) {
+        try {
+          const response = await this.ai.models.generateContentStream({
+            model,
+            contents: prompt,
+          });
+
+          return {
+            stream: response as AsyncIterable<StreamChunk>,
+            model,
+            attempts: attempt,
+          };
+        } catch (error: any) {
+          lastError = error;
+
+          const status = error?.status ?? error?.error?.code;
+          const isRetryable =
+            status === 429 ||
+            status === 503 ||
+            status === 408 ||
+            (typeof status === "number" && status >= 500);
+
+          if (!isRetryable || attempt === maxAttemptsPerModel) {
+            break;
+          }
+
+          const delayMs = this.getBackoffDelayMs(attempt);
+          await this.sleep(delayMs);
+        }
+      }
+    }
+
+    console.error("Gemini stream final error:", lastError);
     throw new InternalServerErrorException("Gemini request failed");
   }
 

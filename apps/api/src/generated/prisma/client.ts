@@ -59,3 +59,8 @@ export type ChatSession = Prisma.ChatSessionModel
  * 
  */
 export type ChatMessage = Prisma.ChatMessageModel
+/**
+ * Model ChatEvaluation
+ * 
+ */
+export type ChatEvaluation = Prisma.ChatEvaluationModel

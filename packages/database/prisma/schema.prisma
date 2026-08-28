@@ -46,13 +46,14 @@ model ChatSession {
   lastMessageAt DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-
+  memory        String?
   userId      String
   interviewId String
 
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   interview Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
   messages  ChatMessage[]
+  evaluation ChatEvaluation?
 }
 
 model ChatMessage {
@@ -63,4 +64,20 @@ model ChatMessage {
 
   sessionId String
   session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+model ChatEvaluation {
+  id            String   @id @default(cuid())
+  sessionId     String   @unique
+  communication Float
+  technical     Float
+  confidence    Float
+  overall       Float
+  strengths     Json
+  improvements  Json
+  feedback      String
+  rawResponse   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 }

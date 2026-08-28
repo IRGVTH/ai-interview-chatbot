@@ -1,12 +1,15 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
   Req,
+  Res,
   UseGuards,
 } from "@nestjs/common";
+import { Response } from "express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { ChatService } from "./chat.service";
 import { CreateChatSessionDto } from "./dto/create-chat-session.dto";
@@ -39,5 +42,20 @@ export class ChatController {
     @Body() dto: SendMessageDto,
   ) {
     return this.chatService.sendMessage(req.user.id, id, dto);
+  }
+
+  @Post("sessions/:id/messages/stream")
+  sendMessageStream(
+    @Req() req: any,
+    @Param("id") id: string,
+    @Body() dto: SendMessageDto,
+    @Res() res: Response,
+  ) {
+    return this.chatService.sendMessageStream(req.user.id, id, dto, res);
+  }
+
+  @Delete("sessions/:id/messages")
+  clearMessages(@Req() req: any, @Param("id") id: string) {
+    return this.chatService.clearMessages(req.user.id, id);
   }
 }

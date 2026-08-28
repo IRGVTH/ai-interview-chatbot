@@ -8,7 +8,7 @@ import { UsersModule } from "./users/users.module";
 import { InterviewModule } from "./interview/interview.module";
 import { GeminiModule } from "./gemini/gemini.module";
 import { ChatModule } from "./chat/chat.module";
-
+import { ReportModule } from "./report/report.module";
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -20,6 +20,7 @@ import { ChatModule } from "./chat/chat.module";
     InterviewModule,
     GeminiModule,
     ChatModule,
+    ReportModule,
   ],
   controllers: [AppController],
   providers: [AppService],

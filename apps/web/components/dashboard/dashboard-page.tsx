@@ -23,6 +23,12 @@ type Interview = {
   updatedAt: string;
 };
 
+function getErrorMessage(error: unknown, fallback = "Request failed") {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  return fallback;
+}
+
 export function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
@@ -50,9 +56,11 @@ export function DashboardPage() {
 
         setUser(me);
         setInterviews(myInterviews);
-      } catch (err: any) {
-        setError(err.message || "Failed to load dashboard");
-        if (String(err.message).toLowerCase().includes("unauthorized")) {
+      } catch (err: unknown) {
+        const message = getErrorMessage(err, "Failed to load dashboard");
+        setError(message);
+
+        if (message.toLowerCase().includes("unauthorized")) {
           localStorage.removeItem("accessToken");
           router.push("/login");
         }
@@ -61,7 +69,7 @@ export function DashboardPage() {
       }
     }
 
-    loadDashboard();
+    void loadDashboard();
   }, [router, token]);
 
   const totalInterviews = interviews.length;
@@ -72,9 +80,8 @@ export function DashboardPage() {
   ).length;
 
   if (loading) {
-    
     return (
-      <div className="min-h-screen p-6">
+      <div className="space-y-6">
         <div className="animate-pulse space-y-4">
           <div className="h-8 w-64 rounded bg-gray-200" />
           <div className="grid gap-4 md:grid-cols-4">
@@ -90,16 +97,18 @@ export function DashboardPage() {
   }
 
   return (
-    <main className="space-y-6">
+    <div className="space-y-6">
       <button
-  onClick={() => {
-    localStorage.removeItem("accessToken");
-    router.push("/login");
-  }}
-  className="fixed right-4 top-4 z-50 rounded-xl border bg-white px-4 py-2 text-sm font-medium shadow-sm hover:bg-gray-50"
->
-  Logout
-</button>
+        type="button"
+        onClick={() => {
+          localStorage.removeItem("accessToken");
+          router.push("/login");
+        }}
+        className="fixed right-4 top-4 z-50 rounded-xl border bg-white px-4 py-2 text-sm font-medium shadow-sm hover:bg-gray-50"
+      >
+        Logout
+      </button>
+
       <div className="mx-auto max-w-6xl space-y-6">
         <section className="rounded-3xl bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -113,15 +122,16 @@ export function DashboardPage() {
               </p>
             </div>
 
-            <div className="flex gap-3">
-              
+            <div className="flex flex-wrap gap-3">
               <button
+                type="button"
                 onClick={() => router.push("/interviews")}
                 className="rounded-xl bg-black px-4 py-2 text-white"
               >
                 New Interview
               </button>
               <button
+                type="button"
                 onClick={() => router.push("/chat")}
                 className="rounded-xl border px-4 py-2"
               >
@@ -153,6 +163,7 @@ export function DashboardPage() {
               </p>
             </div>
             <button
+              type="button"
               onClick={() => router.push("/interviews")}
               className="text-sm font-medium text-black underline"
             >
@@ -184,6 +195,7 @@ export function DashboardPage() {
                       {interview.status}
                     </span>
                     <button
+                      type="button"
                       onClick={() => router.push("/chat")}
                       className="rounded-xl border px-3 py-2 text-sm"
                     >
@@ -196,7 +208,7 @@ export function DashboardPage() {
           )}
         </section>
       </div>
-    </main>
+    </div>
   );
 }
 
@@ -208,3 +220,4 @@ function StatCard({ label, value }: { label: string; value: number }) {
     </div>
   );
 }
+

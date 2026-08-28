@@ -16,7 +16,7 @@ Interview title: ${input.title}
 Position: ${input.position}
 Experience level: ${input.experienceLevel}
 Difficulty: ${input.difficulty}
-Interview summary: ${input.summary || "-"}
+Interview summary: ${input.summary || '-'}
 
 Rules:
 - Ask like a real interviewer.
@@ -31,7 +31,7 @@ Rules:
 - Keep the tone professional but friendly.
 
 Conversation history:
-${input.historyText || "No previous messages."}
+${input.historyText || 'No previous messages.'}
 
 Current user message:
 ${input.currentUserMessage}

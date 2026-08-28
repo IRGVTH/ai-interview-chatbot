@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import { AuthCard } from "@/components/auth/auth-card";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
-
+function getErrorMessage(error: unknown, fallback = "Request failed") {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  return fallback;
+}
 export default function LoginPage() {
   const router = useRouter();
   const [form, setForm] = useState({
@@ -37,8 +41,9 @@ export default function LoginPage() {
 
       localStorage.setItem("accessToken", data.accessToken);
       router.push("/");
-    } catch (err: any) {
-      setError(err.message || "Login failed");
+    } catch (err: unknown) {
+  setError(getErrorMessage(err, "Login failed"));
+
     } finally {
       setLoading(false);
     }

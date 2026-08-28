@@ -3,12 +3,12 @@ import {
   Injectable,
   Logger,
   NotFoundException,
-} from "@nestjs/common";
-import { Response } from "express";
-import { PrismaService } from "../database/prisma.service";
-import { GeminiService } from "../gemini/gemini.service";
-import { CreateChatSessionDto } from "./dto/create-chat-session.dto";
-import { SendMessageDto } from "./dto/send-message.dto";
+} from '@nestjs/common';
+import { Response } from 'express';
+import { PrismaService } from '../database/prisma.service';
+import { GeminiService } from '../gemini/gemini.service';
+import { CreateChatSessionDto } from './dto/create-chat-session.dto';
+import { SendMessageDto } from './dto/send-message.dto';
 
 @Injectable()
 export class ChatService {
@@ -20,7 +20,9 @@ export class ChatService {
   ) {}
 
   async createSession(userId: string, dto: CreateChatSessionDto) {
-    this.logger.log(`Create chat session user=${userId} interview=${dto.interviewId}`);
+    this.logger.log(
+      `Create chat session user=${userId} interview=${dto.interviewId}`,
+    );
 
     const interview = await this.prisma.interview.findFirst({
       where: {
@@ -30,8 +32,10 @@ export class ChatService {
     });
 
     if (!interview) {
-      this.logger.warn(`Create chat session failed: interview not found user=${userId} interview=${dto.interviewId}`);
-      throw new NotFoundException("Interview not found");
+      this.logger.warn(
+        `Create chat session failed: interview not found user=${userId} interview=${dto.interviewId}`,
+      );
+      throw new NotFoundException('Interview not found');
     }
 
     const session = await this.prisma.chatSession.create({
@@ -42,7 +46,9 @@ export class ChatService {
       },
     });
 
-    this.logger.log(`Chat session created session=${session.id} user=${userId}`);
+    this.logger.log(
+      `Chat session created session=${session.id} user=${userId}`,
+    );
 
     return session;
   }
@@ -50,12 +56,12 @@ export class ChatService {
   async findAll(userId: string) {
     return this.prisma.chatSession.findMany({
       where: { userId },
-      orderBy: { updatedAt: "desc" },
+      orderBy: { updatedAt: 'desc' },
       include: {
         interview: true,
         messages: {
           take: 1,
-          orderBy: { createdAt: "desc" },
+          orderBy: { createdAt: 'desc' },
         },
       },
     });
@@ -70,13 +76,13 @@ export class ChatService {
       include: {
         interview: true,
         messages: {
-          orderBy: { createdAt: "asc" },
+          orderBy: { createdAt: 'asc' },
         },
       },
     });
 
     if (!session) {
-      throw new NotFoundException("Chat session not found");
+      throw new NotFoundException('Chat session not found');
     }
 
     return session;
@@ -90,7 +96,7 @@ export class ChatService {
     const userMessage = await this.prisma.chatMessage.create({
       data: {
         sessionId: session.id,
-        role: "user",
+        role: 'user',
         content: dto.content,
       },
     });
@@ -99,14 +105,14 @@ export class ChatService {
       .map((message: { role: string; content: string }) => {
         return `${message.role.toUpperCase()}: ${message.content}`;
       })
-      .join("\n");
+      .join('\n');
 
     const prompt = this.buildPrompt({
-      title: session.title ?? "Interview Chat",
+      title: session.title ?? 'Interview Chat',
       position: session.interview.position,
       experienceLevel: session.interview.experienceLevel,
       difficulty: session.interview.difficulty,
-      summary: session.interview.summary ?? "",
+      summary: session.interview.summary ?? '',
       memory: session.memory ?? null,
       historyText,
       currentUserMessage: dto.content,
@@ -117,7 +123,7 @@ export class ChatService {
     const assistantMessage = await this.prisma.chatMessage.create({
       data: {
         sessionId: session.id,
-        role: "assistant",
+        role: 'assistant',
         content: geminiResponse.text,
       },
     });
@@ -153,7 +159,7 @@ export class ChatService {
     await this.prisma.chatMessage.create({
       data: {
         sessionId: session.id,
-        role: "user",
+        role: 'user',
         content: dto.content,
       },
     });
@@ -162,28 +168,28 @@ export class ChatService {
       .map((message: { role: string; content: string }) => {
         return `${message.role.toUpperCase()}: ${message.content}`;
       })
-      .join("\n");
+      .join('\n');
 
     const prompt = this.buildPrompt({
-      title: session.title ?? "Interview Chat",
+      title: session.title ?? 'Interview Chat',
       position: session.interview.position,
       experienceLevel: session.interview.experienceLevel,
       difficulty: session.interview.difficulty,
-      summary: session.interview.summary ?? "",
+      summary: session.interview.summary ?? '',
       memory: session.memory ?? null,
       historyText,
       currentUserMessage: dto.content,
     });
 
     const gemini = await this.geminiService.stream(prompt);
-    let assistantText = "";
+    let assistantText = '';
 
-    res.setHeader("Content-Type", "text/plain; charset=utf-8");
-    res.setHeader("Cache-Control", "no-cache, no-transform");
-    res.setHeader("Connection", "keep-alive");
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
 
     for await (const chunk of gemini.stream) {
-      const delta = chunk?.text ?? "";
+      const delta = chunk?.text ?? '';
       if (!delta) continue;
 
       assistantText += delta;
@@ -193,7 +199,7 @@ export class ChatService {
     await this.prisma.chatMessage.create({
       data: {
         sessionId: session.id,
-        role: "assistant",
+        role: 'assistant',
         content: assistantText,
       },
     });
@@ -203,7 +209,9 @@ export class ChatService {
       data: { lastMessageAt: new Date() },
     });
 
-    this.logger.log(`Chat stream success user=${userId} session=${sessionId} model=${gemini.model} attempts=${gemini.attempts}`);
+    this.logger.log(
+      `Chat stream success user=${userId} session=${sessionId} model=${gemini.model} attempts=${gemini.attempts}`,
+    );
 
     res.end();
   }
@@ -244,10 +252,10 @@ Interview title: ${input.title}
 Position: ${input.position}
 Experience level: ${input.experienceLevel}
 Difficulty: ${input.difficulty}
-Interview summary: ${input.summary || "-"}
+Interview summary: ${input.summary || '-'}
 
 Long-term memory summary:
-${input.memory || "No saved memory yet."}
+${input.memory || 'No saved memory yet.'}
 
 Rules:
 - Ask like a real interviewer.
@@ -263,7 +271,7 @@ Rules:
 - Keep the tone professional but friendly.
 
 Conversation history:
-${input.historyText || "No previous messages."}
+${input.historyText || 'No previous messages.'}
 
 Current user message:
 ${input.currentUserMessage}

@@ -5,9 +5,7 @@ export type QuestionGeneratorInput = {
   topic?: string;
 };
 
-export function buildQuestionGeneratorPrompt(
-  input: QuestionGeneratorInput,
-) {
+export function buildQuestionGeneratorPrompt(input: QuestionGeneratorInput) {
   return `
 You are an interview question generator.
 
@@ -16,7 +14,7 @@ Generate exactly 1 interview question.
 Position: ${input.position}
 Experience level: ${input.experienceLevel}
 Difficulty: ${input.difficulty}
-Topic: ${input.topic || "general"}
+Topic: ${input.topic || 'general'}
 
 Rules:
 - Output only the question.

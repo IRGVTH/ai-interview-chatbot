@@ -1,7 +1,7 @@
-import { Injectable, Logger, NotFoundException } from "@nestjs/common";
-import { PrismaService } from "../database/prisma.service";
-import { CreateInterviewDto } from "./dto/create-interview.dto";
-import { UpdateInterviewDto } from "./dto/update-interview.dto";
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../database/prisma.service';
+import { CreateInterviewDto } from './dto/create-interview.dto';
+import { UpdateInterviewDto } from './dto/update-interview.dto';
 
 @Injectable()
 export class InterviewService {
@@ -21,7 +21,9 @@ export class InterviewService {
       },
     });
 
-    this.logger.log(`Create interview success interview=${interview.id} user=${userId}`);
+    this.logger.log(
+      `Create interview success interview=${interview.id} user=${userId}`,
+    );
 
     return interview;
   }
@@ -31,7 +33,7 @@ export class InterviewService {
 
     return this.prisma.interview.findMany({
       where: { userId },
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: 'desc' },
     });
   }
 
@@ -44,7 +46,7 @@ export class InterviewService {
 
     if (!interview) {
       this.logger.warn(`Interview not found user=${userId} interview=${id}`);
-      throw new NotFoundException("Interview not found");
+      throw new NotFoundException('Interview not found');
     }
 
     return interview;

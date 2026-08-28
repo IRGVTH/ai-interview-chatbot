@@ -15,7 +15,8 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  interviews Interview[]
+  interviews   Interview[]
+  chatSessions  ChatSession[]
 }
 
 model Interview {
@@ -34,4 +35,32 @@ model Interview {
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  chatSessions ChatSession[]
+}
+
+model ChatSession {
+  id            String   @id @default(cuid())
+  title         String?
+  model         String   @default("gemini-3.1-flash-lite")
+  lastMessageAt DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  userId      String
+  interviewId String
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  interview Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  messages  ChatMessage[]
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  role      String
+  content   String
+  createdAt DateTime @default(now())
+
+  sessionId String
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 }

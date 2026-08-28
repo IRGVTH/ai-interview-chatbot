@@ -1,0 +1,43 @@
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Req,
+  UseGuards,
+} from "@nestjs/common";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { ChatService } from "./chat.service";
+import { CreateChatSessionDto } from "./dto/create-chat-session.dto";
+import { SendMessageDto } from "./dto/send-message.dto";
+
+@Controller("chat")
+@UseGuards(JwtAuthGuard)
+export class ChatController {
+  constructor(private readonly chatService: ChatService) {}
+
+  @Post("sessions")
+  createSession(@Req() req: any, @Body() dto: CreateChatSessionDto) {
+    return this.chatService.createSession(req.user.id, dto);
+  }
+
+  @Get("sessions")
+  findAll(@Req() req: any) {
+    return this.chatService.findAll(req.user.id);
+  }
+
+  @Get("sessions/:id")
+  findOne(@Req() req: any, @Param("id") id: string) {
+    return this.chatService.findOne(req.user.id, id);
+  }
+
+  @Post("sessions/:id/messages")
+  sendMessage(
+    @Req() req: any,
+    @Param("id") id: string,
+    @Body() dto: SendMessageDto,
+  ) {
+    return this.chatService.sendMessage(req.user.id, id, dto);
+  }
+}

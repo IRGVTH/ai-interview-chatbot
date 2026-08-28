@@ -49,3 +49,13 @@ export type User = Prisma.UserModel
  * 
  */
 export type Interview = Prisma.InterviewModel
+/**
+ * Model ChatSession
+ * 
+ */
+export type ChatSession = Prisma.ChatSessionModel
+/**
+ * Model ChatMessage
+ * 
+ */
+export type ChatMessage = Prisma.ChatMessageModel

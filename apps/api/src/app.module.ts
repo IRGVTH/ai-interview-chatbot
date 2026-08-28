@@ -7,6 +7,7 @@ import { AuthModule } from "./auth/auth.module";
 import { UsersModule } from "./users/users.module";
 import { InterviewModule } from "./interview/interview.module";
 import { GeminiModule } from "./gemini/gemini.module";
+import { ChatModule } from "./chat/chat.module";
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { GeminiModule } from "./gemini/gemini.module";
     AuthModule,
     InterviewModule,
     GeminiModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],

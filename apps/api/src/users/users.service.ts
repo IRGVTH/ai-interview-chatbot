@@ -5,11 +5,13 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../database/prisma.service';
+import type { UserRole } from '../common/types/role';
 
 export type SafeUser = {
   id: string;
   email: string;
   name: string | null;
+  role: UserRole;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -30,9 +32,17 @@ export class UsersService {
     id: true,
     email: true,
     name: true,
+    role: true,
     createdAt: true,
     updatedAt: true,
   } as const;
+
+  findAll(): Promise<SafeUser[]> {
+    return this.prisma.user.findMany({
+      orderBy: { createdAt: 'desc' },
+      select: this.safeUserSelect,
+    }) as Promise<SafeUser[]>;
+  }
 
   findByEmail(email: string): Promise<AuthUser | null> {
     return this.prisma.user.findUnique({
@@ -64,9 +74,7 @@ export class UsersService {
   ): Promise<SafeUser> {
     const user = (await this.prisma.user.findUnique({
       where: { id },
-      select: {
-        id: true,
-      },
+      select: { id: true },
     })) as IdOnly | null;
 
     if (!user) {
@@ -110,11 +118,44 @@ export class UsersService {
       updateData.password = await bcrypt.hash(data.password, 10);
     }
 
-    return (await this.prisma.user.update({
+    return this.prisma.user.update({
       where: { id },
       data: updateData,
       select: this.safeUserSelect,
-    })) as SafeUser;
+    }) as Promise<SafeUser>;
+  }
+
+  async updateRole(id: string, role: UserRole): Promise<SafeUser> {
+    const user = (await this.prisma.user.findUnique({
+      where: { id },
+      select: { id: true },
+    })) as IdOnly | null;
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return this.prisma.user.update({
+      where: { id },
+      data: { role },
+      select: this.safeUserSelect,
+    }) as Promise<SafeUser>;
+  }
+
+  async remove(id: string): Promise<SafeUser> {
+    const user = (await this.prisma.user.findUnique({
+      where: { id },
+      select: { id: true },
+    })) as IdOnly | null;
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return this.prisma.user.delete({
+      where: { id },
+      select: this.safeUserSelect,
+    }) as Promise<SafeUser>;
   }
 
   async create(data: {
@@ -135,13 +176,13 @@ export class UsersService {
 
     const hashedPassword = await bcrypt.hash(data.password, 10);
 
-    return (await this.prisma.user.create({
+    return this.prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         name: data.name?.trim() || null,
       },
       select: this.safeUserSelect,
-    })) as SafeUser;
+    }) as Promise<SafeUser>;
   }
 }

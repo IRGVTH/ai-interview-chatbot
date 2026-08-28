@@ -64,22 +64,24 @@ export class AuthService {
 
     this.logger.log(`Login success: ${user.id} (${user.email})`);
 
-    return this.buildResponse({
+    const safeUser: SafeUser = {
       id: user.id,
       email: user.email,
       name: user.name,
+      role: user.role,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
-    });
+    };
+
+    return this.buildResponse(safeUser);
   }
 
   private buildResponse(user: SafeUser): AuthResponse {
-    const payload = {
+    const token = this.jwtService.sign({
       sub: user.id,
       email: user.email,
-    };
-
-    const token = this.jwtService.sign(payload);
+      role: user.role,
+    });
 
     return {
       accessToken: token,

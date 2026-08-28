@@ -1,4 +1,9 @@
-import { IsIn, IsOptional, IsString, MinLength } from "class-validator";
+import {
+  IsIn,
+  IsOptional,
+  IsString,
+  MinLength,
+} from "class-validator";
 
 export class UpdateInterviewDto {
   @IsOptional()
@@ -12,21 +17,15 @@ export class UpdateInterviewDto {
   position?: string;
 
   @IsOptional()
-  @IsString()
   @IsIn(["0-1", "1-3", "3+"])
   experienceLevel?: string;
 
   @IsOptional()
-  @IsString()
   @IsIn(["easy", "medium", "hard"])
   difficulty?: string;
 
   @IsOptional()
   @IsString()
-  @IsIn(["draft", "active", "completed"])
-  status?: string;
-
-  @IsOptional()
-  @IsString()
+  @MinLength(2)
   summary?: string;
 }

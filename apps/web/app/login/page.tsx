@@ -56,7 +56,7 @@ export default function LoginPage() {
       return;
     }
 
-    window.location.href = `${API_URL}/auth/google`;
+    window.location.assign(`${API_URL}/auth/google`);
   }
 
   return (

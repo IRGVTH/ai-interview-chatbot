@@ -64,42 +64,55 @@ export function AdminPage() {
     return localStorage.getItem("accessToken");
   }, []);
 
-  async function loadUsers() {
-    if (!token) {
-      router.push("/login");
-      return;
-    }
-
-    try {
-      setError("");
-      const data = await apiFetch<User[]>("/admin/users", { token });
-      setUsers(data);
-
-      if (!selectedUser && data.length > 0) {
-        setSelectedUser(data[0]);
-        setUpdateForm({
-          email: data[0].email,
-          name: data[0].name ?? "",
-          password: "",
-          role: data[0].role,
-        });
-      }
-    } catch (err: unknown) {
-      const message = getErrorMessage(err, "Failed to load users");
-      setError(message);
-
-      if (message.toLowerCase().includes("unauthorized")) {
-        localStorage.removeItem("accessToken");
-        router.push("/login");
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
-
   useEffect(() => {
+    let cancelled = false;
+
+    const loadUsers = async () => {
+      if (!token) {
+        router.push("/login");
+        return;
+      }
+
+      try {
+        setError("");
+        const data = await apiFetch<User[]>("/admin/users", { token });
+
+        if (cancelled) return;
+
+        setUsers(data);
+
+        if (data.length > 0) {
+          const first = data[0];
+          setSelectedUser(first);
+          setUpdateForm({
+            email: first.email,
+            name: first.name ?? "",
+            password: "",
+            role: first.role,
+          });
+        }
+      } catch (err: unknown) {
+        if (cancelled) return;
+
+        const message = getErrorMessage(err, "Failed to load users");
+        setError(message);
+
+        if (message.toLowerCase().includes("unauthorized")) {
+          localStorage.removeItem("accessToken");
+          router.push("/login");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
     void loadUsers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    return () => {
+      cancelled = true;
+    };
   }, [router, token]);
 
   const filteredUsers = useMemo(() => {
@@ -589,4 +602,3 @@ function SelectField({
     </div>
   );
 }
-

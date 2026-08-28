@@ -2,9 +2,9 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
-} from '@nestjs/common';
-import * as bcrypt from 'bcryptjs';
-import { PrismaService } from '../database/prisma.service';
+} from "@nestjs/common";
+import * as bcrypt from "bcryptjs";
+import { PrismaService } from "../database/prisma.service";
 
 export type SafeUser = {
   id: string;
@@ -16,6 +16,10 @@ export type SafeUser = {
 
 export type AuthUser = SafeUser & {
   password: string | null;
+};
+
+type IdOnly = {
+  id: string;
 };
 
 @Injectable()
@@ -58,16 +62,15 @@ export class UsersService {
     id: string,
     data: { name?: string; email?: string; password?: string },
   ): Promise<SafeUser> {
-    const user = await this.prisma.user.findUnique({
+    const user = (await this.prisma.user.findUnique({
       where: { id },
       select: {
         id: true,
-        email: true,
       },
-    });
+    })) as IdOnly | null;
 
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException("User not found");
     }
 
     const updateData: {
@@ -84,16 +87,16 @@ export class UsersService {
       const email = data.email.trim().toLowerCase();
 
       if (!email) {
-        throw new ConflictException('Email is invalid');
+        throw new ConflictException("Email is invalid");
       }
 
-      const existingUser = await this.prisma.user.findUnique({
+      const existingUser = (await this.prisma.user.findUnique({
         where: { email },
         select: { id: true },
-      });
+      })) as IdOnly | null;
 
       if (existingUser && existingUser.id !== id) {
-        throw new ConflictException('Email already exists');
+        throw new ConflictException("Email already exists");
       }
 
       updateData.email = email;
@@ -101,17 +104,17 @@ export class UsersService {
 
     if (data.password !== undefined) {
       if (data.password.length < 6) {
-        throw new ConflictException('Password must be at least 6 characters');
+        throw new ConflictException("Password must be at least 6 characters");
       }
 
       updateData.password = await bcrypt.hash(data.password, 10);
     }
 
-    return this.prisma.user.update({
+    return (await this.prisma.user.update({
       where: { id },
       data: updateData,
       select: this.safeUserSelect,
-    }) as Promise<SafeUser>;
+    })) as SafeUser;
   }
 
   async create(data: {
@@ -121,24 +124,24 @@ export class UsersService {
   }): Promise<SafeUser> {
     const email = data.email.trim().toLowerCase();
 
-    const existingUser = await this.prisma.user.findUnique({
+    const existingUser = (await this.prisma.user.findUnique({
       where: { email },
       select: { id: true },
-    });
+    })) as IdOnly | null;
 
     if (existingUser) {
-      throw new ConflictException('Email already exists');
+      throw new ConflictException("Email already exists");
     }
 
     const hashedPassword = await bcrypt.hash(data.password, 10);
 
-    return this.prisma.user.create({
+    return (await this.prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         name: data.name?.trim() || null,
       },
       select: this.safeUserSelect,
-    }) as Promise<SafeUser>;
+    })) as SafeUser;
   }
 }

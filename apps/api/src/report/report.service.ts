@@ -119,7 +119,7 @@ export class ReportService {
   }
 
   async getEvaluation(userId: string, sessionId: string) {
-    const session = (await this.prisma.chatSession.findFirst({
+    const rawSession = (await this.prisma.chatSession.findFirst({
       where: {
         id: sessionId,
         userId,
@@ -131,7 +131,9 @@ export class ReportService {
         },
         evaluation: true,
       },
-    })) as unknown as ChatSessionItem | null;
+    })) as unknown;
+
+    const session = rawSession as ChatSessionItem | null;
 
     if (!session) {
       throw new NotFoundException('Chat session not found');
@@ -141,7 +143,7 @@ export class ReportService {
   }
 
   async evaluateSession(userId: string, sessionId: string) {
-    const session = (await this.prisma.chatSession.findFirst({
+    const rawSession = (await this.prisma.chatSession.findFirst({
       where: {
         id: sessionId,
         userId,
@@ -153,7 +155,9 @@ export class ReportService {
         },
         evaluation: true,
       },
-    })) as unknown as ChatSessionItem | null;
+    })) as unknown;
+
+    const session = rawSession as ChatSessionItem | null;
 
     if (!session) {
       throw new NotFoundException('Chat session not found');
@@ -203,7 +207,7 @@ Rules:
     const result = await this.geminiService.ask(prompt);
     const parsed = this.parseEvaluation(result.text);
 
-    const saved = (await this.prisma.chatEvaluation.upsert({
+    const rawSaved = (await this.prisma.chatEvaluation.upsert({
       where: { sessionId: session.id },
       create: {
         sessionId: session.id,
@@ -226,7 +230,9 @@ Rules:
         feedback: parsed.feedback,
         rawResponse: result.text,
       },
-    })) as unknown as EvaluationItem;
+    })) as unknown;
+
+    const saved = rawSaved as EvaluationItem;
     return saved;
   }
 

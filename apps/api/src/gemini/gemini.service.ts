@@ -26,7 +26,11 @@ export class GeminiService {
     'gemini-3.1-flash-lite',
     'gemini-3.7-flash',
   ];
-
+  private formatStatus(status: unknown) {
+    return typeof status === 'string' || typeof status === 'number'
+      ? String(status)
+      : 'unknown';
+  }
   constructor(private readonly configService: ConfigService) {
     const apiKey = this.configService.get<string>('GEMINI_API_KEY');
 
@@ -71,8 +75,8 @@ export class GeminiService {
           const { status, isRetryable } = this.getRetryInfo(error, true);
 
           this.logger.warn(
-            `Gemini stream failed model=${model} attempt=${attempt} status=${String(
-              status ?? 'unknown',
+            `Gemini ask failed model=${model} attempt=${attempt} status=${this.formatStatus(
+              status,
             )} retryable=${isRetryable}`,
           );
 
@@ -127,8 +131,8 @@ export class GeminiService {
           const { status, isRetryable } = this.getRetryInfo(error, false);
 
           this.logger.warn(
-            `Gemini stream failed model=${model} attempt=${attempt} status=${String(
-              status ?? 'unknown',
+            `Gemini stream failed model=${model} attempt=${attempt} status=${this.formatStatus(
+              status,
             )} retryable=${isRetryable}`,
           );
 

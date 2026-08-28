@@ -7,7 +7,7 @@ import {
   useState,
   type FormEvent,
 } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 
 type ChatMessage = {
@@ -91,6 +91,10 @@ type BrowserWindowWithSpeechRecognition = Window & {
   webkitSpeechRecognition?: SpeechRecognitionConstructorLike;
 };
 
+type ChatPageProps = {
+  initialSessionId: string;
+};
+
 function getErrorMessage(error: unknown, fallback = "Request failed") {
   if (error instanceof Error) return error.message;
   if (typeof error === "string") return error;
@@ -125,18 +129,15 @@ async function readErrorMessage(response: Response, fallback: string) {
   }
 }
 
-export function ChatPage() {
+export function ChatPage({ initialSessionId }: ChatPageProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const lastSpokenAssistantIdRef = useRef<string | null>(null);
 
   const [sessions, setSessions] = useState<SessionListItem[]>([]);
   const [activeSession, setActiveSession] = useState<ChatSession | null>(null);
-  const [sessionId, setSessionId] = useState<string>(
-    searchParams.get("sessionId") || "",
-  );
+  const [sessionId, setSessionId] = useState<string>(initialSessionId);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -175,23 +176,22 @@ export function ChatPage() {
 
         setSessions(data);
 
-        const initialSessionId =
-          searchParams.get("sessionId") || data[0]?.id || "";
+        const nextSessionId = initialSessionId || data[0]?.id || "";
 
-        if (!initialSessionId) {
+        if (!nextSessionId) {
           setActiveSession(null);
           setSessionId("");
           return;
         }
 
-        setSessionId(initialSessionId);
+        setSessionId(nextSessionId);
 
-        if (!searchParams.get("sessionId")) {
-          router.replace(`/chat?sessionId=${initialSessionId}`);
+        if (!initialSessionId) {
+          router.replace(`/chat?sessionId=${nextSessionId}`);
         }
 
         const selected = await apiFetch<ChatSession>(
-          `/chat/sessions/${initialSessionId}`,
+          `/chat/sessions/${nextSessionId}`,
           { token },
         );
 
@@ -210,7 +210,7 @@ export function ChatPage() {
     }
 
     void loadSessions();
-  }, [router, searchParams, token]);
+  }, [initialSessionId, router, token]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

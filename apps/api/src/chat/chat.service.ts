@@ -1,6 +1,7 @@
 import {
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from "@nestjs/common";
 import { Response } from "express";
@@ -11,12 +12,16 @@ import { SendMessageDto } from "./dto/send-message.dto";
 
 @Injectable()
 export class ChatService {
+  private readonly logger = new Logger(ChatService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly geminiService: GeminiService,
   ) {}
 
   async createSession(userId: string, dto: CreateChatSessionDto) {
+    this.logger.log(`Create chat session user=${userId} interview=${dto.interviewId}`);
+
     const interview = await this.prisma.interview.findFirst({
       where: {
         id: dto.interviewId,
@@ -25,16 +30,21 @@ export class ChatService {
     });
 
     if (!interview) {
+      this.logger.warn(`Create chat session failed: interview not found user=${userId} interview=${dto.interviewId}`);
       throw new NotFoundException("Interview not found");
     }
 
-    return this.prisma.chatSession.create({
+    const session = await this.prisma.chatSession.create({
       data: {
         userId,
         interviewId: interview.id,
         title: dto.title ?? `${interview.position} Interview`,
       },
     });
+
+    this.logger.log(`Chat session created session=${session.id} user=${userId}`);
+
+    return session;
   }
 
   async findAll(userId: string) {
@@ -73,6 +83,8 @@ export class ChatService {
   }
 
   async sendMessage(userId: string, sessionId: string, dto: SendMessageDto) {
+    this.logger.log(`Chat send user=${userId} session=${sessionId}`);
+
     const session = await this.findOne(userId, sessionId);
 
     const userMessage = await this.prisma.chatMessage.create({
@@ -95,6 +107,7 @@ export class ChatService {
       experienceLevel: session.interview.experienceLevel,
       difficulty: session.interview.difficulty,
       summary: session.interview.summary ?? "",
+      memory: session.memory ?? null,
       historyText,
       currentUserMessage: dto.content,
     });
@@ -114,6 +127,10 @@ export class ChatService {
       data: { lastMessageAt: new Date() },
     });
 
+    this.logger.log(
+      `Chat send success user=${userId} session=${sessionId} model=${geminiResponse.model} attempts=${geminiResponse.attempts}`,
+    );
+
     return {
       sessionId: session.id,
       model: geminiResponse.model,
@@ -129,6 +146,8 @@ export class ChatService {
     dto: SendMessageDto,
     res: Response,
   ) {
+    this.logger.log(`Chat stream start user=${userId} session=${sessionId}`);
+
     const session = await this.findOne(userId, sessionId);
 
     await this.prisma.chatMessage.create({
@@ -146,15 +165,15 @@ export class ChatService {
       .join("\n");
 
     const prompt = this.buildPrompt({
-  title: session.title ?? "Interview Chat",
-  position: session.interview.position,
-  experienceLevel: session.interview.experienceLevel,
-  difficulty: session.interview.difficulty,
-  summary: session.interview.summary ?? "",
-  memory: session.memory ?? null,
-  historyText,
-  currentUserMessage: dto.content,
-});
+      title: session.title ?? "Interview Chat",
+      position: session.interview.position,
+      experienceLevel: session.interview.experienceLevel,
+      difficulty: session.interview.difficulty,
+      summary: session.interview.summary ?? "",
+      memory: session.memory ?? null,
+      historyText,
+      currentUserMessage: dto.content,
+    });
 
     const gemini = await this.geminiService.stream(prompt);
     let assistantText = "";
@@ -184,10 +203,14 @@ export class ChatService {
       data: { lastMessageAt: new Date() },
     });
 
+    this.logger.log(`Chat stream success user=${userId} session=${sessionId} model=${gemini.model} attempts=${gemini.attempts}`);
+
     res.end();
   }
 
   async clearMessages(userId: string, sessionId: string) {
+    this.logger.log(`Chat clear user=${userId} session=${sessionId}`);
+
     const session = await this.findOne(userId, sessionId);
 
     await this.prisma.chatMessage.deleteMany({
@@ -199,20 +222,22 @@ export class ChatService {
       data: { lastMessageAt: null },
     });
 
+    this.logger.log(`Chat cleared user=${userId} session=${sessionId}`);
+
     return { success: true };
   }
 
   private buildPrompt(input: {
-  title: string;
-  position: string;
-  experienceLevel: string;
-  difficulty: string;
-  summary: string;
-  memory?: string | null;
-  historyText: string;
-  currentUserMessage: string;
-}) {
-  return `
+    title: string;
+    position: string;
+    experienceLevel: string;
+    difficulty: string;
+    summary: string;
+    memory?: string | null;
+    historyText: string;
+    currentUserMessage: string;
+  }) {
+    return `
 You are an AI interviewer for a university portfolio project.
 
 Interview title: ${input.title}
@@ -245,5 +270,5 @@ ${input.currentUserMessage}
 
 Reply now as the interviewer.
 `.trim();
-}
+  }
 }

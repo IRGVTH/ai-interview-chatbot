@@ -1,4 +1,8 @@
-import { Injectable, InternalServerErrorException } from "@nestjs/common";
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { GoogleGenAI } from "@google/genai";
 
@@ -7,6 +11,7 @@ type StreamChunk = { text?: string };
 
 @Injectable()
 export class GeminiService {
+  private readonly logger = new Logger(GeminiService.name);
   private readonly ai: GoogleGenAI;
   private readonly models: GeminiModel[] = [
     "gemini-3.1-flash-lite",
@@ -32,6 +37,8 @@ export class GeminiService {
     for (const model of this.models) {
       for (let attempt = 1; attempt <= maxAttemptsPerModel; attempt++) {
         try {
+          this.logger.log(`Gemini ask start model=${model} attempt=${attempt}`);
+
           const response = await this.withTimeout(
             this.ai.models.generateContent({
               model,
@@ -39,6 +46,8 @@ export class GeminiService {
             }),
             requestTimeoutMs,
           );
+
+          this.logger.log(`Gemini ask success model=${model} attempt=${attempt}`);
 
           return {
             text: response.text ?? "",
@@ -56,17 +65,22 @@ export class GeminiService {
             (typeof status === "number" && status >= 500) ||
             error?.name === "TimeoutError";
 
+          this.logger.warn(
+            `Gemini ask failed model=${model} attempt=${attempt} status=${status ?? "unknown"} retryable=${isRetryable}`,
+          );
+
           if (!isRetryable || attempt === maxAttemptsPerModel) {
             break;
           }
 
           const delayMs = this.getBackoffDelayMs(attempt);
+          this.logger.warn(`Gemini ask retry model=${model} nextAttempt=${attempt + 1} delay=${delayMs}ms`);
           await this.sleep(delayMs);
         }
       }
     }
 
-    console.error("Gemini final error:", lastError);
+    this.logger.error("Gemini final error", lastError instanceof Error ? lastError.stack : undefined);
     throw new InternalServerErrorException("Gemini request failed");
   }
 
@@ -77,10 +91,14 @@ export class GeminiService {
     for (const model of this.models) {
       for (let attempt = 1; attempt <= maxAttemptsPerModel; attempt++) {
         try {
+          this.logger.log(`Gemini stream start model=${model} attempt=${attempt}`);
+
           const response = await this.ai.models.generateContentStream({
             model,
             contents: prompt,
           });
+
+          this.logger.log(`Gemini stream success model=${model} attempt=${attempt}`);
 
           return {
             stream: response as AsyncIterable<StreamChunk>,
@@ -97,17 +115,22 @@ export class GeminiService {
             status === 408 ||
             (typeof status === "number" && status >= 500);
 
+          this.logger.warn(
+            `Gemini stream failed model=${model} attempt=${attempt} status=${status ?? "unknown"} retryable=${isRetryable}`,
+          );
+
           if (!isRetryable || attempt === maxAttemptsPerModel) {
             break;
           }
 
           const delayMs = this.getBackoffDelayMs(attempt);
+          this.logger.warn(`Gemini stream retry model=${model} nextAttempt=${attempt + 1} delay=${delayMs}ms`);
           await this.sleep(delayMs);
         }
       }
     }
 
-    console.error("Gemini stream final error:", lastError);
+    this.logger.error("Gemini stream final error", lastError instanceof Error ? lastError.stack : undefined);
     throw new InternalServerErrorException("Gemini request failed");
   }
 

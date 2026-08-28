@@ -61,10 +61,6 @@ export class ReportService {
     private readonly geminiService: GeminiService,
   ) {}
 
-  private async toUnknown<T>(value: Promise<T>): Promise<unknown> {
-    return value;
-  }
-
   async getOverview(userId: string) {
     const interviews = (await this.prisma.interview.findMany({
       where: { userId },
@@ -93,13 +89,13 @@ export class ReportService {
       orderBy: { updatedAt: 'desc' },
     })) as EvaluationItem[];
 
-    const totalMessages = await this.prisma.chatMessage.count({
+    const totalMessages = (await this.prisma.chatMessage.count({
       where: {
         session: {
           userId,
         },
       },
-    });
+    })) as number;
 
     const latestSession = sessions[0] ?? null;
 
@@ -123,23 +119,19 @@ export class ReportService {
   }
 
   async getEvaluation(userId: string, sessionId: string) {
-    const rawSession = await Promise.resolve(
-      this.prisma.chatSession.findFirst({
-        where: {
-          id: sessionId,
-          userId,
+    const session = (await this.prisma.chatSession.findFirst({
+      where: {
+        id: sessionId,
+        userId,
+      },
+      include: {
+        interview: true,
+        messages: {
+          orderBy: { createdAt: 'asc' },
         },
-        include: {
-          interview: true,
-          messages: {
-            orderBy: { createdAt: 'asc' },
-          },
-          evaluation: true,
-        },
-      }) as Promise<unknown>,
-    );
-
-    const session = rawSession as ChatSessionItem | null;
+        evaluation: true,
+      },
+    })) as ChatSessionItem | null;
 
     if (!session) {
       throw new NotFoundException('Chat session not found');
@@ -149,23 +141,19 @@ export class ReportService {
   }
 
   async evaluateSession(userId: string, sessionId: string) {
-    const rawSession = await Promise.resolve(
-      this.prisma.chatSession.findFirst({
-        where: {
-          id: sessionId,
-          userId,
+    const session = (await this.prisma.chatSession.findFirst({
+      where: {
+        id: sessionId,
+        userId,
+      },
+      include: {
+        interview: true,
+        messages: {
+          orderBy: { createdAt: 'asc' },
         },
-        include: {
-          interview: true,
-          messages: {
-            orderBy: { createdAt: 'asc' },
-          },
-          evaluation: true,
-        },
-      }) as Promise<unknown>,
-    );
-
-    const session = rawSession as ChatSessionItem | null;
+        evaluation: true,
+      },
+    })) as ChatSessionItem | null;
 
     if (!session) {
       throw new NotFoundException('Chat session not found');
@@ -215,34 +203,31 @@ Rules:
     const result = await this.geminiService.ask(prompt);
     const parsed = this.parseEvaluation(result.text);
 
-    const rawSaved = await Promise.resolve(
-      this.prisma.chatEvaluation.upsert({
-        where: { sessionId: session.id },
-        create: {
-          sessionId: session.id,
-          communication: parsed.communication,
-          technical: parsed.technical,
-          confidence: parsed.confidence,
-          overall: parsed.overall,
-          strengths: parsed.strengths,
-          improvements: parsed.improvements,
-          feedback: parsed.feedback,
-          rawResponse: result.text,
-        },
-        update: {
-          communication: parsed.communication,
-          technical: parsed.technical,
-          confidence: parsed.confidence,
-          overall: parsed.overall,
-          strengths: parsed.strengths,
-          improvements: parsed.improvements,
-          feedback: parsed.feedback,
-          rawResponse: result.text,
-        },
-      }) as Promise<unknown>,
-    );
+    const saved = (await this.prisma.chatEvaluation.upsert({
+      where: { sessionId: session.id },
+      create: {
+        sessionId: session.id,
+        communication: parsed.communication,
+        technical: parsed.technical,
+        confidence: parsed.confidence,
+        overall: parsed.overall,
+        strengths: parsed.strengths,
+        improvements: parsed.improvements,
+        feedback: parsed.feedback,
+        rawResponse: result.text,
+      },
+      update: {
+        communication: parsed.communication,
+        technical: parsed.technical,
+        confidence: parsed.confidence,
+        overall: parsed.overall,
+        strengths: parsed.strengths,
+        improvements: parsed.improvements,
+        feedback: parsed.feedback,
+        rawResponse: result.text,
+      },
+    })) as EvaluationItem;
 
-    const saved = rawSaved as EvaluationItem;
     return saved;
   }
 

@@ -13,4 +13,7 @@ RUN pnpm install --frozen-lockfile
 RUN pnpm --filter api build
 
 EXPOSE 4000
+
 CMD ["sh", "-c", "pnpm --filter api start:prod"]
+
+

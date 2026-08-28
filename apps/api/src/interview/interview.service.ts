@@ -50,7 +50,7 @@ export class InterviewService {
     return this.prisma.interview.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
-    }) as Promise<InterviewRecord[]>;
+    });
   }
 
   async findOne(userId: string, id: string): Promise<InterviewRecord> {

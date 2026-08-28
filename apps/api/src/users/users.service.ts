@@ -41,7 +41,7 @@ export class UsersService {
     return this.prisma.user.findMany({
       orderBy: { createdAt: 'desc' },
       select: this.safeUserSelect,
-    }) as Promise<SafeUser[]>;
+    });
   }
 
   findByEmail(email: string): Promise<AuthUser | null> {
@@ -51,31 +51,31 @@ export class UsersService {
         ...this.safeUserSelect,
         password: true,
       },
-    }) as Promise<AuthUser | null>;
+    });
   }
 
   findByEmailSafe(email: string): Promise<SafeUser | null> {
     return this.prisma.user.findUnique({
       where: { email },
       select: this.safeUserSelect,
-    }) as Promise<SafeUser | null>;
+    });
   }
 
   findById(id: string): Promise<SafeUser | null> {
     return this.prisma.user.findUnique({
       where: { id },
       select: this.safeUserSelect,
-    }) as Promise<SafeUser | null>;
+    });
   }
 
   async updateProfile(
     id: string,
     data: { name?: string; email?: string; password?: string },
   ): Promise<SafeUser> {
-    const user = (await this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { id },
       select: { id: true },
-    })) as IdOnly | null;
+    });
 
     if (!user) {
       throw new NotFoundException('User not found');
@@ -99,10 +99,10 @@ export class UsersService {
         throw new ConflictException('Email is invalid');
       }
 
-      const existingUser = (await this.prisma.user.findUnique({
+      const existingUser = await this.prisma.user.findUnique({
         where: { email },
         select: { id: true },
-      })) as IdOnly | null;
+      });
 
       if (existingUser && existingUser.id !== id) {
         throw new ConflictException('Email already exists');
@@ -123,14 +123,14 @@ export class UsersService {
       where: { id },
       data: updateData,
       select: this.safeUserSelect,
-    }) as Promise<SafeUser>;
+    });
   }
 
   async updateRole(id: string, role: UserRole): Promise<SafeUser> {
-    const user = (await this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { id },
       select: { id: true },
-    })) as IdOnly | null;
+    });
 
     if (!user) {
       throw new NotFoundException('User not found');
@@ -140,7 +140,7 @@ export class UsersService {
       where: { id },
       data: { role },
       select: this.safeUserSelect,
-    }) as Promise<SafeUser>;
+    });
   }
 
   async updateByAdmin(
@@ -152,10 +152,10 @@ export class UsersService {
       role?: UserRole;
     },
   ): Promise<SafeUser> {
-    const user = (await this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { id },
       select: { id: true },
-    })) as IdOnly | null;
+    });
 
     if (!user) {
       throw new NotFoundException('User not found');
@@ -179,10 +179,10 @@ export class UsersService {
         throw new ConflictException('Email is invalid');
       }
 
-      const existingUser = (await this.prisma.user.findUnique({
+      const existingUser = await this.prisma.user.findUnique({
         where: { email },
         select: { id: true },
-      })) as IdOnly | null;
+      });
 
       if (existingUser && existingUser.id !== id) {
         throw new ConflictException('Email already exists');
@@ -207,14 +207,14 @@ export class UsersService {
       where: { id },
       data: updateData,
       select: this.safeUserSelect,
-    }) as Promise<SafeUser>;
+    });
   }
 
   async remove(id: string): Promise<SafeUser> {
-    const user = (await this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { id },
       select: { id: true },
-    })) as IdOnly | null;
+    });
 
     if (!user) {
       throw new NotFoundException('User not found');
@@ -223,7 +223,7 @@ export class UsersService {
     return this.prisma.user.delete({
       where: { id },
       select: this.safeUserSelect,
-    }) as Promise<SafeUser>;
+    });
   }
 
   async create(data: {
@@ -234,10 +234,10 @@ export class UsersService {
   }): Promise<SafeUser> {
     const email = data.email.trim().toLowerCase();
 
-    const existingUser = (await this.prisma.user.findUnique({
+    const existingUser = await this.prisma.user.findUnique({
       where: { email },
       select: { id: true },
-    })) as IdOnly | null;
+    });
 
     if (existingUser) {
       throw new ConflictException('Email already exists');
@@ -253,6 +253,6 @@ export class UsersService {
         role: data.role ?? 'USER',
       },
       select: this.safeUserSelect,
-    }) as Promise<SafeUser>;
+    });
   }
 }

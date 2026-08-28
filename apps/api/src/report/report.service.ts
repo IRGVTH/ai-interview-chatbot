@@ -89,13 +89,13 @@ export class ReportService {
       orderBy: { updatedAt: 'desc' },
     })) as EvaluationItem[];
 
-    const totalMessages = (await this.prisma.chatMessage.count({
+    const totalMessages = await this.prisma.chatMessage.count({
       where: {
         session: {
           userId,
         },
       },
-    })) as number;
+    });
 
     const latestSession = sessions[0] ?? null;
 

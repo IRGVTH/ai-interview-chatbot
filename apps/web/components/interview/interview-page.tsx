@@ -44,7 +44,11 @@ const POSITION_OPTIONS = [
   "Cloud Engineer",
   "Database Administrator",
 ];
-
+function getErrorMessage(error: unknown, fallback = "Request failed") {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  return fallback;
+}
 export function InterviewPage() {
   const router = useRouter();
   const [interviews, setInterviews] = useState<Interview[]>([]);
@@ -81,13 +85,17 @@ export function InterviewPage() {
         if (data.length > 0) {
           setSelectedInterviewId(data[0].id);
         }
-      } catch (err: any) {
-        setError(err.message || "Failed to load interviews");
-        if (String(err.message).toLowerCase().includes("unauthorized")) {
+      }catch (err: unknown) {
+        const message = getErrorMessage(err, "Failed to load interviews");
+        setError(message);
+
+        if (message.toLowerCase().includes("unauthorized")) {
           localStorage.removeItem("accessToken");
           router.push("/login");
         }
-      } finally {
+      }
+        
+      finally {
         setLoading(false);
       }
     }
@@ -119,8 +127,8 @@ export function InterviewPage() {
         summary: "",
       });
       setResumeName("");
-    } catch (err: any) {
-      setError(err.message || "Failed to create interview");
+    }  catch (err: unknown) {
+  setError(getErrorMessage(err, "Failed to create interview"));
     } finally {
       setCreating(false);
     }
@@ -140,8 +148,8 @@ export function InterviewPage() {
       });
 
       router.push(`/chat?sessionId=${session.id}`);
-    } catch (err: any) {
-      setError(err.message || "Failed to create chat session");
+    } catch (err: unknown) {
+  setError(getErrorMessage(err, "Failed to create chat session"));
     }
   }
 async function handleDeleteInterview(interviewId: string) {
@@ -163,8 +171,8 @@ async function handleDeleteInterview(interviewId: string) {
       const remaining = interviews.filter((item) => item.id !== interviewId);
       return remaining[0]?.id ?? "";
     });
-  } catch (err: any) {
-    setError(err.message || "Failed to delete interview");
+  } catch (err: unknown) {
+  setError(getErrorMessage(err, "Failed to delete interview"));
   }
 }
   if (loading) {

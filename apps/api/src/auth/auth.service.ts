@@ -8,7 +8,20 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
-import { UsersService } from '../users/users.service';
+import {
+  UsersService,
+  type AuthUser,
+  type SafeUser,
+} from '../users/users.service';
+
+type AuthLikeUser = SafeUser & {
+  password?: string | null;
+};
+
+type AuthResponse = {
+  accessToken: string;
+  user: SafeUser;
+};
 
 @Injectable()
 export class AuthService {
@@ -19,7 +32,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async register(dto: RegisterDto) {
+  async register(dto: RegisterDto): Promise<AuthResponse> {
     this.logger.log(`Register attempt: ${dto.email}`);
 
     const existingUser = await this.usersService.findByEmail(dto.email);
@@ -40,7 +53,7 @@ export class AuthService {
     return this.buildResponse(user);
   }
 
-  async login(dto: LoginDto) {
+  async login(dto: LoginDto): Promise<AuthResponse> {
     this.logger.log(`Login attempt: ${dto.email}`);
 
     const user = await this.usersService.findByEmail(dto.email);
@@ -62,15 +75,14 @@ export class AuthService {
     return this.buildResponse(user);
   }
 
-  private buildResponse(user: any) {
+  private buildResponse(user: AuthLikeUser): AuthResponse {
     const payload = {
       sub: user.id,
       email: user.email,
     };
 
     const token = this.jwtService.sign(payload);
-
-    const { password, ...safeUser } = user;
+    const { password: _password, ...safeUser } = user;
 
     return {
       accessToken: token,

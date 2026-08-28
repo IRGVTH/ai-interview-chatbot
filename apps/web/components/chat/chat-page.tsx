@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 
@@ -48,16 +54,76 @@ type SessionListItem = {
   messages: ChatMessage[];
 };
 
+type SpeechRecognitionAlternativeLike = {
+  transcript: string;
+};
+
+type SpeechRecognitionResultLike = {
+  isFinal: boolean;
+  length: number;
+  [index: number]: SpeechRecognitionAlternativeLike;
+};
+
+type SpeechRecognitionEventLike = {
+  resultIndex: number;
+  results: ArrayLike<SpeechRecognitionResultLike>;
+};
+
+type SpeechRecognitionErrorLike = {
+  error?: string;
+};
+
 type SpeechRecognitionLike = {
   continuous: boolean;
   interimResults: boolean;
   lang: string;
-  onresult: ((event: any) => void) | null;
-  onerror: ((event: any) => void) | null;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorLike) => void) | null;
   onend: (() => void) | null;
   start: () => void;
   stop: () => void;
 };
+
+type SpeechRecognitionConstructorLike = new () => SpeechRecognitionLike;
+
+type BrowserWindowWithSpeechRecognition = Window & {
+  SpeechRecognition?: SpeechRecognitionConstructorLike;
+  webkitSpeechRecognition?: SpeechRecognitionConstructorLike;
+};
+
+function getErrorMessage(error: unknown, fallback = "Request failed") {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  return fallback;
+}
+
+async function readErrorMessage(response: Response, fallback: string) {
+  try {
+    const text = await response.text();
+    if (!text.trim()) return fallback;
+
+    const data = JSON.parse(text) as unknown;
+    if (typeof data === "object" && data !== null) {
+      const maybeMessage = (data as { message?: unknown }).message;
+
+      if (typeof maybeMessage === "string" && maybeMessage.trim()) {
+        return maybeMessage;
+      }
+
+      if (Array.isArray(maybeMessage)) {
+        const joined = maybeMessage
+          .map((item) => String(item))
+          .filter(Boolean)
+          .join(", ");
+        return joined || fallback;
+      }
+    }
+
+    return fallback;
+  } catch {
+    return fallback;
+  }
+}
 
 export function ChatPage() {
   const router = useRouter();
@@ -130,9 +196,11 @@ export function ChatPage() {
         );
 
         setActiveSession(selected);
-      } catch (err: any) {
-        setError(err.message || "Failed to load chat");
-        if (String(err.message).toLowerCase().includes("unauthorized")) {
+      } catch (err: unknown) {
+        const messageText = getErrorMessage(err, "Failed to load chat");
+        setError(messageText);
+
+        if (messageText.toLowerCase().includes("unauthorized")) {
           localStorage.removeItem("accessToken");
           router.push("/login");
         }
@@ -141,7 +209,7 @@ export function ChatPage() {
       }
     }
 
-    loadSessions();
+    void loadSessions();
   }, [router, searchParams, token]);
 
   useEffect(() => {
@@ -187,9 +255,9 @@ export function ChatPage() {
   function startListening() {
     if (typeof window === "undefined") return;
 
+    const speechWindow = window as BrowserWindowWithSpeechRecognition;
     const SpeechRecognitionCtor =
-      (window as any).SpeechRecognition ||
-      (window as any).webkitSpeechRecognition;
+      speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
 
     if (!SpeechRecognitionCtor) {
       setVoiceError("This browser does not support voice input.");
@@ -205,7 +273,7 @@ export function ChatPage() {
 
     let finalTranscript = "";
 
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event: SpeechRecognitionEventLike) => {
       let interimTranscript = "";
 
       for (let i = event.resultIndex; i < event.results.length; i += 1) {
@@ -220,8 +288,8 @@ export function ChatPage() {
       setMessage((finalTranscript + interimTranscript).trim());
     };
 
-    recognition.onerror = (event: any) => {
-      setVoiceError(event?.error || "Voice input failed.");
+    recognition.onerror = (event: SpeechRecognitionErrorLike) => {
+      setVoiceError(event.error || "Voice input failed.");
       setIsListening(false);
       recognitionRef.current = null;
     };
@@ -248,16 +316,20 @@ export function ChatPage() {
         { token },
       );
       setActiveSession(selected);
-    } catch (err: any) {
-      setError(err.message || "Failed to load chat session");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Failed to load chat session"));
     }
   }
 
-  async function handleSend(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (!token || !sessionId || !message.trim() || isStreaming) return;
+  async function handleSendMessage(content: string) {
+    if (!token || !sessionId || !content.trim() || isStreaming) return;
+    if (!apiBaseUrl) {
+      setError("API URL is not configured");
+      return;
+    }
 
-    const content = message.trim();
+    const cleanedContent = content.trim();
+
     setMessage("");
     setIsStreaming(true);
     setError("");
@@ -277,7 +349,7 @@ export function ChatPage() {
           {
             id: tempUserId,
             role: "user",
-            content,
+            content: cleanedContent,
             createdAt: now,
           },
           {
@@ -299,20 +371,15 @@ export function ChatPage() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ content }),
+          body: JSON.stringify({ content: cleanedContent }),
         },
       );
 
       if (!res.ok || !res.body) {
-        let messageText = "Failed to send message";
-
-        try {
-          const data = await res.json();
-          messageText = data.message || messageText;
-        } catch {
-          // ignore
-        }
-
+        const messageText = await readErrorMessage(
+          res,
+          "Failed to send message",
+        );
         throw new Error(messageText);
       }
 
@@ -373,8 +440,8 @@ export function ChatPage() {
         lastSpokenAssistantIdRef.current = lastAssistant.id;
         speakText(lastAssistant.content);
       }
-    } catch (err: any) {
-      setError(err.message || "Failed to send message");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Failed to send message"));
 
       try {
         const refreshed = await apiFetch<ChatSession>(
@@ -431,8 +498,8 @@ export function ChatPage() {
 
       window.speechSynthesis?.cancel();
       lastSpokenAssistantIdRef.current = null;
-    } catch (err: any) {
-      setError(err.message || "Failed to clear chat");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Failed to clear chat"));
     }
   }
 
@@ -539,7 +606,9 @@ export function ChatPage() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold">Sessions</h2>
-                <p className="text-sm text-gray-500">Auto-select latest session</p>
+                <p className="text-sm text-gray-500">
+                  Auto-select latest session
+                </p>
               </div>
             </div>
 
@@ -556,7 +625,7 @@ export function ChatPage() {
                     <button
                       key={item.id}
                       type="button"
-                      onClick={() => switchSession(item.id)}
+                      onClick={() => void switchSession(item.id)}
                       className={`w-full rounded-2xl border p-4 text-left transition ${
                         active
                           ? "border-black bg-gray-50"
@@ -631,7 +700,13 @@ export function ChatPage() {
               )}
             </div>
 
-            <form onSubmit={handleSend} className="border-t p-4">
+            <form
+              onSubmit={(e: FormEvent<HTMLFormElement>) => {
+                e.preventDefault();
+                void handleSendMessage(message);
+              }}
+              className="border-t p-4"
+            >
               <div className="flex flex-col gap-3 sm:flex-row">
                 <textarea
                   className="min-h-14 flex-1 resize-none rounded-2xl border px-4 py-3 outline-none focus:ring-2 focus:ring-black/10"
@@ -642,7 +717,7 @@ export function ChatPage() {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
                       if (!isStreaming) {
-                        handleSend(e as any);
+                        void handleSendMessage(message);
                       }
                     }
                   }}

@@ -6,6 +6,18 @@ import {
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../database/prisma.service';
 
+export type SafeUser = {
+  id: string;
+  email: string;
+  name: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type AuthUser = SafeUser & {
+  password: string | null;
+};
+
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
@@ -18,34 +30,34 @@ export class UsersService {
     updatedAt: true,
   } as const;
 
-  findByEmail(email: string) {
+  findByEmail(email: string): Promise<AuthUser | null> {
     return this.prisma.user.findUnique({
       where: { email },
       select: {
         ...this.safeUserSelect,
         password: true,
       },
-    });
+    }) as Promise<AuthUser | null>;
   }
 
-  findByEmailSafe(email: string) {
+  findByEmailSafe(email: string): Promise<SafeUser | null> {
     return this.prisma.user.findUnique({
       where: { email },
       select: this.safeUserSelect,
-    });
+    }) as Promise<SafeUser | null>;
   }
 
-  findById(id: string) {
+  findById(id: string): Promise<SafeUser | null> {
     return this.prisma.user.findUnique({
       where: { id },
       select: this.safeUserSelect,
-    });
+    }) as Promise<SafeUser | null>;
   }
 
   async updateProfile(
     id: string,
     data: { name?: string; email?: string; password?: string },
-  ) {
+  ): Promise<SafeUser> {
     const user = await this.prisma.user.findUnique({
       where: { id },
       select: {
@@ -99,10 +111,14 @@ export class UsersService {
       where: { id },
       data: updateData,
       select: this.safeUserSelect,
-    });
+    }) as Promise<SafeUser>;
   }
 
-  async create(data: { email: string; password: string; name?: string }) {
+  async create(data: {
+    email: string;
+    password: string;
+    name?: string;
+  }): Promise<SafeUser> {
     const email = data.email.trim().toLowerCase();
 
     const existingUser = await this.prisma.user.findUnique({
@@ -123,6 +139,6 @@ export class UsersService {
         name: data.name?.trim() || null,
       },
       select: this.safeUserSelect,
-    });
+    }) as Promise<SafeUser>;
   }
 }

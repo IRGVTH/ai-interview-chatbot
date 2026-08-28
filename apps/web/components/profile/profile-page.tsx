@@ -19,7 +19,11 @@ type ReportOverview = {
   totalEvaluations: number;
   averageOverall: number;
 };
-
+function getErrorMessage(error: unknown, fallback = "Request failed") {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  return fallback;
+}
 export function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
@@ -57,9 +61,11 @@ export function ProfilePage() {
         setName(me.name || "");
         setEmail(me.email || "");
         setReport(overview);
-      } catch (err: any) {
-        setError(err.message || "Failed to load profile");
-        if (String(err.message).toLowerCase().includes("unauthorized")) {
+      } catch (err: unknown) {
+        const message = getErrorMessage(err, "Failed to load profile");
+        setError(message);
+
+        if (message.toLowerCase().includes("unauthorized")) {
           localStorage.removeItem("accessToken");
           router.push("/login");
         }
@@ -104,8 +110,8 @@ export function ProfilePage() {
       setEmail(updated.email || "");
       setPassword("");
       setSuccess("Profile updated successfully");
-    } catch (err: any) {
-      setError(err.message || "Failed to update profile");
+    } catch (err: unknown) {
+  setError(getErrorMessage(err, "Failed to update profile"));
     } finally {
       setSaving(false);
     }

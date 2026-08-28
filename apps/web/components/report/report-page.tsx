@@ -67,7 +67,11 @@ type ReportOverview = {
   sessions: ChatSession[];
   evaluations: ChatEvaluation[];
 };
-
+function getErrorMessage(error: unknown, fallback = "Request failed") {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  return fallback;
+}
 export function ReportPage() {
   const router = useRouter();
   const [data, setData] = useState<ReportOverview | null>(null);
@@ -91,21 +95,51 @@ export function ReportPage() {
         token,
       });
       setData(overview);
-    } catch (err: any) {
-      setError(err.message || "Failed to load report");
-      if (String(err.message).toLowerCase().includes("unauthorized")) {
-        localStorage.removeItem("accessToken");
-        router.push("/login");
-      }
+    } catch (err: unknown) {
+        const message = getErrorMessage(err, "Failed to load report");
+        setError(message);
+
+        if (message.toLowerCase().includes("unauthorized")) {
+          localStorage.removeItem("accessToken");
+          router.push("/login");
+        }
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    loadReport();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router, token]);
+  let cancelled = false;
+
+  void (async () => {
+    if (!token) {
+      router.push("/login");
+      return;
+    }
+
+    try {
+      const overview = await apiFetch<ReportOverview>("/report/overview", {
+        token,
+      });
+
+      if (!cancelled) {
+        setData(overview);
+      }
+    } catch (err: unknown) {
+      if (!cancelled) {
+        setError(getErrorMessage(err, "Failed to load report"));
+      }
+    } finally {
+      if (!cancelled) {
+        setLoading(false);
+      }
+    }
+  })();
+
+  return () => {
+    cancelled = true;
+  };
+}, [router, token]);
 
   async function generateScore(sessionId: string) {
     if (!token) return;
@@ -120,8 +154,8 @@ export function ReportPage() {
       });
 
       await loadReport();
-    } catch (err: any) {
-      setError(err.message || "Failed to evaluate session");
+    }  catch (err: unknown) {
+  setError(getErrorMessage(err, "Failed to evaluate session"));
     } finally {
       setEvaluatingId("");
     }

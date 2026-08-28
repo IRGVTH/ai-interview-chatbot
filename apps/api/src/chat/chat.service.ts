@@ -7,6 +7,7 @@ import { PrismaService } from "../database/prisma.service";
 import { GeminiService } from "../gemini/gemini.service";
 import { CreateChatSessionDto } from "./dto/create-chat-session.dto";
 import { SendMessageDto } from "./dto/send-message.dto";
+import { buildInterviewerPrompt } from "../gemini/prompts/interviewer.prompt";
 
 @Injectable()
 export class ChatService {
@@ -88,15 +89,15 @@ export class ChatService {
   })
   .join("\n");
 
-    const prompt = this.buildPrompt({
-      title: session.title ?? "Interview Chat",
-      position: session.interview.position,
-      experienceLevel: session.interview.experienceLevel,
-      difficulty: session.interview.difficulty,
-      summary: session.interview.summary ?? "",
-      historyText,
-      currentUserMessage: dto.content,
-    });
+    const prompt = buildInterviewerPrompt({
+  title: session.title ?? "Interview Chat",
+  position: session.interview.position,
+  experienceLevel: session.interview.experienceLevel,
+  difficulty: session.interview.difficulty,
+  summary: session.interview.summary ?? "",
+  historyText,
+  currentUserMessage: dto.content,
+});
 
     const geminiResponse = await this.geminiService.ask(prompt);
 

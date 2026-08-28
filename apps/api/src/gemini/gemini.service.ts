@@ -7,8 +7,6 @@ type GeminiModel = "gemini-3.1-flash-lite" | "gemini-3.7-flash";
 @Injectable()
 export class GeminiService {
   private readonly ai: GoogleGenAI;
-
-  // เริ่มจากตัวที่เบาและเร็วกว่า
   private readonly models: GeminiModel[] = [
     "gemini-3.1-flash-lite",
     "gemini-3.7-flash",
@@ -72,7 +70,6 @@ export class GeminiService {
   }
 
   private getBackoffDelayMs(attempt: number) {
-    // exponential backoff + small jitter
     const base = 1000 * Math.pow(2, attempt - 1);
     const jitter = Math.floor(Math.random() * 250);
     return base + jitter;

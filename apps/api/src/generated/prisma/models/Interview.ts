@@ -28,6 +28,12 @@ export type InterviewMinAggregateOutputType = {
   id: string | null
   title: string | null
   position: string | null
+  experienceLevel: string | null
+  difficulty: string | null
+  status: string | null
+  summary: string | null
+  startedAt: Date | null
+  finishedAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
   userId: string | null
@@ -37,6 +43,12 @@ export type InterviewMaxAggregateOutputType = {
   id: string | null
   title: string | null
   position: string | null
+  experienceLevel: string | null
+  difficulty: string | null
+  status: string | null
+  summary: string | null
+  startedAt: Date | null
+  finishedAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
   userId: string | null
@@ -46,6 +58,12 @@ export type InterviewCountAggregateOutputType = {
   id: number
   title: number
   position: number
+  experienceLevel: number
+  difficulty: number
+  status: number
+  summary: number
+  startedAt: number
+  finishedAt: number
   createdAt: number
   updatedAt: number
   userId: number
@@ -57,6 +75,12 @@ export type InterviewMinAggregateInputType = {
   id?: true
   title?: true
   position?: true
+  experienceLevel?: true
+  difficulty?: true
+  status?: true
+  summary?: true
+  startedAt?: true
+  finishedAt?: true
   createdAt?: true
   updatedAt?: true
   userId?: true
@@ -66,6 +90,12 @@ export type InterviewMaxAggregateInputType = {
   id?: true
   title?: true
   position?: true
+  experienceLevel?: true
+  difficulty?: true
+  status?: true
+  summary?: true
+  startedAt?: true
+  finishedAt?: true
   createdAt?: true
   updatedAt?: true
   userId?: true
@@ -75,6 +105,12 @@ export type InterviewCountAggregateInputType = {
   id?: true
   title?: true
   position?: true
+  experienceLevel?: true
+  difficulty?: true
+  status?: true
+  summary?: true
+  startedAt?: true
+  finishedAt?: true
   createdAt?: true
   updatedAt?: true
   userId?: true
@@ -157,6 +193,12 @@ export type InterviewGroupByOutputType = {
   id: string
   title: string
   position: string
+  experienceLevel: string
+  difficulty: string
+  status: string
+  summary: string | null
+  startedAt: Date | null
+  finishedAt: Date | null
   createdAt: Date
   updatedAt: Date
   userId: string
@@ -187,6 +229,12 @@ export type InterviewWhereInput = {
   id?: Prisma.StringFilter<"Interview"> | string
   title?: Prisma.StringFilter<"Interview"> | string
   position?: Prisma.StringFilter<"Interview"> | string
+  experienceLevel?: Prisma.StringFilter<"Interview"> | string
+  difficulty?: Prisma.StringFilter<"Interview"> | string
+  status?: Prisma.StringFilter<"Interview"> | string
+  summary?: Prisma.StringNullableFilter<"Interview"> | string | null
+  startedAt?: Prisma.DateTimeNullableFilter<"Interview"> | Date | string | null
+  finishedAt?: Prisma.DateTimeNullableFilter<"Interview"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Interview"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Interview"> | Date | string
   userId?: Prisma.StringFilter<"Interview"> | string
@@ -197,6 +245,12 @@ export type InterviewOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   title?: Prisma.SortOrder
   position?: Prisma.SortOrder
+  experienceLevel?: Prisma.SortOrder
+  difficulty?: Prisma.SortOrder
+  status?: Prisma.SortOrder
+  summary?: Prisma.SortOrderInput | Prisma.SortOrder
+  startedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  finishedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   userId?: Prisma.SortOrder
@@ -210,6 +264,12 @@ export type InterviewWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.InterviewWhereInput | Prisma.InterviewWhereInput[]
   title?: Prisma.StringFilter<"Interview"> | string
   position?: Prisma.StringFilter<"Interview"> | string
+  experienceLevel?: Prisma.StringFilter<"Interview"> | string
+  difficulty?: Prisma.StringFilter<"Interview"> | string
+  status?: Prisma.StringFilter<"Interview"> | string
+  summary?: Prisma.StringNullableFilter<"Interview"> | string | null
+  startedAt?: Prisma.DateTimeNullableFilter<"Interview"> | Date | string | null
+  finishedAt?: Prisma.DateTimeNullableFilter<"Interview"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Interview"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Interview"> | Date | string
   userId?: Prisma.StringFilter<"Interview"> | string
@@ -220,6 +280,12 @@ export type InterviewOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   title?: Prisma.SortOrder
   position?: Prisma.SortOrder
+  experienceLevel?: Prisma.SortOrder
+  difficulty?: Prisma.SortOrder
+  status?: Prisma.SortOrder
+  summary?: Prisma.SortOrderInput | Prisma.SortOrder
+  startedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  finishedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   userId?: Prisma.SortOrder
@@ -235,6 +301,12 @@ export type InterviewScalarWhereWithAggregatesInput = {
   id?: Prisma.StringWithAggregatesFilter<"Interview"> | string
   title?: Prisma.StringWithAggregatesFilter<"Interview"> | string
   position?: Prisma.StringWithAggregatesFilter<"Interview"> | string
+  experienceLevel?: Prisma.StringWithAggregatesFilter<"Interview"> | string
+  difficulty?: Prisma.StringWithAggregatesFilter<"Interview"> | string
+  status?: Prisma.StringWithAggregatesFilter<"Interview"> | string
+  summary?: Prisma.StringNullableWithAggregatesFilter<"Interview"> | string | null
+  startedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Interview"> | Date | string | null
+  finishedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Interview"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Interview"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Interview"> | Date | string
   userId?: Prisma.StringWithAggregatesFilter<"Interview"> | string
@@ -244,6 +316,12 @@ export type InterviewCreateInput = {
   id?: string
   title: string
   position: string
+  experienceLevel: string
+  difficulty: string
+  status?: string
+  summary?: string | null
+  startedAt?: Date | string | null
+  finishedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   user: Prisma.UserCreateNestedOneWithoutInterviewsInput
@@ -253,6 +331,12 @@ export type InterviewUncheckedCreateInput = {
   id?: string
   title: string
   position: string
+  experienceLevel: string
+  difficulty: string
+  status?: string
+  summary?: string | null
+  startedAt?: Date | string | null
+  finishedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   userId: string
@@ -262,6 +346,12 @@ export type InterviewUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   position?: Prisma.StringFieldUpdateOperationsInput | string
+  experienceLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  difficulty?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  finishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user?: Prisma.UserUpdateOneRequiredWithoutInterviewsNestedInput
@@ -271,6 +361,12 @@ export type InterviewUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   position?: Prisma.StringFieldUpdateOperationsInput | string
+  experienceLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  difficulty?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  finishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -280,6 +376,12 @@ export type InterviewCreateManyInput = {
   id?: string
   title: string
   position: string
+  experienceLevel: string
+  difficulty: string
+  status?: string
+  summary?: string | null
+  startedAt?: Date | string | null
+  finishedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   userId: string
@@ -289,6 +391,12 @@ export type InterviewUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   position?: Prisma.StringFieldUpdateOperationsInput | string
+  experienceLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  difficulty?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  finishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -297,6 +405,12 @@ export type InterviewUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   position?: Prisma.StringFieldUpdateOperationsInput | string
+  experienceLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  difficulty?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  finishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -316,6 +430,12 @@ export type InterviewCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   title?: Prisma.SortOrder
   position?: Prisma.SortOrder
+  experienceLevel?: Prisma.SortOrder
+  difficulty?: Prisma.SortOrder
+  status?: Prisma.SortOrder
+  summary?: Prisma.SortOrder
+  startedAt?: Prisma.SortOrder
+  finishedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   userId?: Prisma.SortOrder
@@ -325,6 +445,12 @@ export type InterviewMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   title?: Prisma.SortOrder
   position?: Prisma.SortOrder
+  experienceLevel?: Prisma.SortOrder
+  difficulty?: Prisma.SortOrder
+  status?: Prisma.SortOrder
+  summary?: Prisma.SortOrder
+  startedAt?: Prisma.SortOrder
+  finishedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   userId?: Prisma.SortOrder
@@ -334,6 +460,12 @@ export type InterviewMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   title?: Prisma.SortOrder
   position?: Prisma.SortOrder
+  experienceLevel?: Prisma.SortOrder
+  difficulty?: Prisma.SortOrder
+  status?: Prisma.SortOrder
+  summary?: Prisma.SortOrder
+  startedAt?: Prisma.SortOrder
+  finishedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   userId?: Prisma.SortOrder
@@ -381,10 +513,20 @@ export type InterviewUncheckedUpdateManyWithoutUserNestedInput = {
   deleteMany?: Prisma.InterviewScalarWhereInput | Prisma.InterviewScalarWhereInput[]
 }
 
+export type NullableDateTimeFieldUpdateOperationsInput = {
+  set?: Date | string | null
+}
+
 export type InterviewCreateWithoutUserInput = {
   id?: string
   title: string
   position: string
+  experienceLevel: string
+  difficulty: string
+  status?: string
+  summary?: string | null
+  startedAt?: Date | string | null
+  finishedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -393,6 +535,12 @@ export type InterviewUncheckedCreateWithoutUserInput = {
   id?: string
   title: string
   position: string
+  experienceLevel: string
+  difficulty: string
+  status?: string
+  summary?: string | null
+  startedAt?: Date | string | null
+  finishedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -430,6 +578,12 @@ export type InterviewScalarWhereInput = {
   id?: Prisma.StringFilter<"Interview"> | string
   title?: Prisma.StringFilter<"Interview"> | string
   position?: Prisma.StringFilter<"Interview"> | string
+  experienceLevel?: Prisma.StringFilter<"Interview"> | string
+  difficulty?: Prisma.StringFilter<"Interview"> | string
+  status?: Prisma.StringFilter<"Interview"> | string
+  summary?: Prisma.StringNullableFilter<"Interview"> | string | null
+  startedAt?: Prisma.DateTimeNullableFilter<"Interview"> | Date | string | null
+  finishedAt?: Prisma.DateTimeNullableFilter<"Interview"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Interview"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Interview"> | Date | string
   userId?: Prisma.StringFilter<"Interview"> | string
@@ -439,6 +593,12 @@ export type InterviewCreateManyUserInput = {
   id?: string
   title: string
   position: string
+  experienceLevel: string
+  difficulty: string
+  status?: string
+  summary?: string | null
+  startedAt?: Date | string | null
+  finishedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -447,6 +607,12 @@ export type InterviewUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   position?: Prisma.StringFieldUpdateOperationsInput | string
+  experienceLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  difficulty?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  finishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -455,6 +621,12 @@ export type InterviewUncheckedUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   position?: Prisma.StringFieldUpdateOperationsInput | string
+  experienceLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  difficulty?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  finishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -463,6 +635,12 @@ export type InterviewUncheckedUpdateManyWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   position?: Prisma.StringFieldUpdateOperationsInput | string
+  experienceLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  difficulty?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  summary?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  finishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -473,6 +651,12 @@ export type InterviewSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   id?: boolean
   title?: boolean
   position?: boolean
+  experienceLevel?: boolean
+  difficulty?: boolean
+  status?: boolean
+  summary?: boolean
+  startedAt?: boolean
+  finishedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   userId?: boolean
@@ -483,6 +667,12 @@ export type InterviewSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ext
   id?: boolean
   title?: boolean
   position?: boolean
+  experienceLevel?: boolean
+  difficulty?: boolean
+  status?: boolean
+  summary?: boolean
+  startedAt?: boolean
+  finishedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   userId?: boolean
@@ -493,6 +683,12 @@ export type InterviewSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ext
   id?: boolean
   title?: boolean
   position?: boolean
+  experienceLevel?: boolean
+  difficulty?: boolean
+  status?: boolean
+  summary?: boolean
+  startedAt?: boolean
+  finishedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   userId?: boolean
@@ -503,12 +699,18 @@ export type InterviewSelectScalar = {
   id?: boolean
   title?: boolean
   position?: boolean
+  experienceLevel?: boolean
+  difficulty?: boolean
+  status?: boolean
+  summary?: boolean
+  startedAt?: boolean
+  finishedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   userId?: boolean
 }
 
-export type InterviewOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "title" | "position" | "createdAt" | "updatedAt" | "userId", ExtArgs["result"]["interview"]>
+export type InterviewOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "title" | "position" | "experienceLevel" | "difficulty" | "status" | "summary" | "startedAt" | "finishedAt" | "createdAt" | "updatedAt" | "userId", ExtArgs["result"]["interview"]>
 export type InterviewInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
 }
@@ -528,6 +730,12 @@ export type $InterviewPayload<ExtArgs extends runtime.Types.Extensions.InternalA
     id: string
     title: string
     position: string
+    experienceLevel: string
+    difficulty: string
+    status: string
+    summary: string | null
+    startedAt: Date | null
+    finishedAt: Date | null
     createdAt: Date
     updatedAt: Date
     userId: string
@@ -958,6 +1166,12 @@ export interface InterviewFieldRefs {
   readonly id: Prisma.FieldRef<"Interview", 'String'>
   readonly title: Prisma.FieldRef<"Interview", 'String'>
   readonly position: Prisma.FieldRef<"Interview", 'String'>
+  readonly experienceLevel: Prisma.FieldRef<"Interview", 'String'>
+  readonly difficulty: Prisma.FieldRef<"Interview", 'String'>
+  readonly status: Prisma.FieldRef<"Interview", 'String'>
+  readonly summary: Prisma.FieldRef<"Interview", 'String'>
+  readonly startedAt: Prisma.FieldRef<"Interview", 'DateTime'>
+  readonly finishedAt: Prisma.FieldRef<"Interview", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"Interview", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Interview", 'DateTime'>
   readonly userId: Prisma.FieldRef<"Interview", 'String'>

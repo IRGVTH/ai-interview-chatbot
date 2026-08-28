@@ -87,6 +87,12 @@ export const InterviewScalarFieldEnum = {
   id: 'id',
   title: 'title',
   position: 'position',
+  experienceLevel: 'experienceLevel',
+  difficulty: 'difficulty',
+  status: 'status',
+  summary: 'summary',
+  startedAt: 'startedAt',
+  finishedAt: 'finishedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   userId: 'userId'

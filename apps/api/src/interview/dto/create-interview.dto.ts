@@ -17,6 +17,10 @@ export class CreateInterviewDto {
 
   @IsOptional()
   @IsString()
+  resumeFileName?: string;
+
+  @IsOptional()
+  @IsString()
   resumeText?: string;
 
   @IsOptional()

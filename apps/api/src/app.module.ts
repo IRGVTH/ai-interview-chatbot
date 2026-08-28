@@ -10,6 +10,7 @@ import { GeminiModule } from './gemini/gemini.module';
 import { ChatModule } from './chat/chat.module';
 import { ReportModule } from './report/report.module';
 import { AdminModule } from './admin/admin.module';
+import { ResumeModule } from './resume/resume.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { AdminModule } from './admin/admin.module';
     ChatModule,
     ReportModule,
     AdminModule,
+    ResumeModule,
   ],
   controllers: [AppController],
   providers: [AppService],

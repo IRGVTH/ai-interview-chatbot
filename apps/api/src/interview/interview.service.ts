@@ -11,6 +11,8 @@ type InterviewRecord = {
   difficulty: string;
   status: string;
   summary: string | null;
+  resumeFileName: string | null;
+  resumeText: string | null;
   userId: string;
   createdAt: Date;
   updatedAt: Date;
@@ -22,6 +24,11 @@ export class InterviewService {
 
   constructor(private readonly prisma: PrismaService) {}
 
+  private cleanText(value?: string | null) {
+    if (value == null) return value;
+    return value.split(String.fromCharCode(0)).join('').trim();
+  }
+
   async create(
     userId: string,
     dto: CreateInterviewDto,
@@ -32,7 +39,13 @@ export class InterviewService {
 
     const interview = (await this.prisma.interview.create({
       data: {
-        ...dto,
+        title: this.cleanText(dto.title) ?? dto.title,
+        position: this.cleanText(dto.position) ?? dto.position,
+        experienceLevel: dto.experienceLevel,
+        difficulty: dto.difficulty,
+        summary: this.cleanText(dto.summary) ?? null,
+        resumeFileName: this.cleanText(dto.resumeFileName) ?? null,
+        resumeText: this.cleanText(dto.resumeText) ?? null,
         userId,
       },
     })) as InterviewRecord;
@@ -79,7 +92,29 @@ export class InterviewService {
 
     const interview = (await this.prisma.interview.update({
       where: { id },
-      data: dto,
+      data: {
+        ...(dto.title !== undefined && {
+          title: this.cleanText(dto.title) ?? dto.title,
+        }),
+        ...(dto.position !== undefined && {
+          position: this.cleanText(dto.position) ?? dto.position,
+        }),
+        ...(dto.experienceLevel !== undefined && {
+          experienceLevel: dto.experienceLevel,
+        }),
+        ...(dto.difficulty !== undefined && {
+          difficulty: dto.difficulty,
+        }),
+        ...(dto.summary !== undefined && {
+          summary: this.cleanText(dto.summary) ?? null,
+        }),
+        ...(dto.resumeFileName !== undefined && {
+          resumeFileName: this.cleanText(dto.resumeFileName) ?? null,
+        }),
+        ...(dto.resumeText !== undefined && {
+          resumeText: this.cleanText(dto.resumeText) ?? null,
+        }),
+      },
     })) as InterviewRecord;
 
     this.logger.log(`Update interview success user=${userId} interview=${id}`);

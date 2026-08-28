@@ -34,7 +34,9 @@ model Interview {
   summary          String?
   startedAt        DateTime?
   finishedAt       DateTime?
-resumeText String?
+resumeFileName String?
+resumeText     String?
+
 resumeUploadedAt DateTime?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt

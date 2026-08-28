@@ -322,8 +322,8 @@ export class ChatService {
     experienceLevel: string;
     difficulty: string;
     summary: string;
-    memory?: string | null;
     resumeText?: string | null;
+    memory?: string | null;
     historyText: string;
     currentUserMessage: string;
   }) {
@@ -334,6 +334,7 @@ Interview title: ${input.title}
 Position: ${input.position}
 Experience level: ${input.experienceLevel}
 Difficulty: ${input.difficulty}
+Resume: ${input.resumeText || 'No resume provided.'}
 Interview summary: ${input.summary || '-'}
 
 Resume:

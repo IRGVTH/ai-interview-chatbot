@@ -1,6 +1,8 @@
 import { IsIn, IsOptional, IsString, MinLength } from 'class-validator';
+import { PartialType } from '@nestjs/mapped-types';
+import { CreateInterviewDto } from './create-interview.dto';
 
-export class UpdateInterviewDto {
+export class UpdateInterviewDto extends PartialType(CreateInterviewDto) {
   @IsOptional()
   @IsString()
   @MinLength(2)

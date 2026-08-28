@@ -18,11 +18,12 @@ type Interview = {
 };
 
 type CreateInterviewForm = {
-  title: string;
+   title: string;
   position: string;
   experienceLevel: string;
   difficulty: string;
   summary: string;
+  resumeFileName: string;
   resumeText: string;
 };
 
@@ -60,14 +61,16 @@ export function InterviewPage() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const [selectedInterviewId, setSelectedInterviewId] = useState<string>("");
-
+const [resumeUploading, setResumeUploading] = useState(false);
+const [resumeName, setResumeName] = useState("");
   const [form, setForm] = useState<CreateInterviewForm>({
     title: "",
     position: "Frontend Developer",
     experienceLevel: "0-1",
     difficulty: "easy",
     summary: "",
-    resumeText: "",
+     resumeFileName: "",
+  resumeText: "",
   });
 
   const token = useMemo(() => {
@@ -121,12 +124,13 @@ export function InterviewPage() {
       setInterviews((prev) => [created, ...prev]);
       setSelectedInterviewId(created.id);
       setForm({
-        title: "",
-        position: "Frontend Developer",
-        experienceLevel: "0-1",
-        difficulty: "easy",
-        summary: "",
-        resumeText: "",
+         title: "",
+  position: "Frontend Developer",
+  experienceLevel: "0-1",
+  difficulty: "easy",
+  summary: "",
+  resumeFileName: "",
+  resumeText: "",
       });
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Failed to create interview"));
@@ -134,7 +138,42 @@ export function InterviewPage() {
       setCreating(false);
     }
   }
+async function handleResumeUpload(file: File) {
+  if (!token) return;
 
+  setResumeUploading(true);
+  setError("");
+
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/resumes/parse`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new Error(data.message || "Failed to parse resume");
+    }
+
+    setResumeName(data.fileName || file.name);
+    setForm((prev) => ({
+      ...prev,
+      resumeFileName: data.fileName || file.name,
+      resumeText: data.text || "",
+    }));
+  } catch (err: unknown) {
+    setError(getErrorMessage(err, "Failed to upload resume"));
+  } finally {
+    setResumeUploading(false);
+  }
+}
   async function handleStartChat() {
     if (!token || !selectedInterviewId) return;
 
@@ -269,21 +308,31 @@ export function InterviewPage() {
               </div>
 
               <div>
-                <label className="mb-1 block text-sm font-medium">Resume</label>
-                <textarea
-                  className="min-h-40 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-black/10"
-                  value={form.resumeText}
-                  onChange={(e) =>
-                    setForm({ ...form, resumeText: e.target.value })
-                  }
-                  placeholder="Paste the resume text here. AI will read this before the interview."
-                />
-                <p className="mt-2 text-xs text-gray-400">
-                  For now, paste resume text here. PDF/DOCX upload can be added
-                  later.
-                </p>
-              </div>
+  <label className="mb-2 block text-sm font-medium">Resume Upload</label>
 
+  <input
+    type="file"
+    accept=".pdf,.docx"
+    className="block w-full rounded-xl border px-3 py-2"
+    onChange={(e) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        void handleResumeUpload(file);
+      }
+    }}
+    disabled={resumeUploading}
+  />
+
+  <p className="mt-2 text-xs text-gray-400">
+    รองรับ PDF และ DOCX
+  </p>
+
+  {resumeName ? (
+    <p className="mt-2 text-sm text-gray-600">
+      Uploaded: <span className="font-medium">{resumeName}</span>
+    </p>
+  ) : null}
+</div>
               <button
                 type="submit"
                 disabled={creating}

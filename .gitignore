@@ -49,6 +49,8 @@ web_modules/
 .env
 .env.local
 .env.*.local
+.env.*
+!.env.example
 # Optional npm cache directory
 .npm
 

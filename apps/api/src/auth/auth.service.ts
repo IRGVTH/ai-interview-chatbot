@@ -37,17 +37,17 @@ export class AuthService {
   async login(dto: LoginDto) {
     const user = await this.usersService.findByEmail(dto.email);
 
-    if (!user || !user.password) {
-      throw new UnauthorizedException("Invalid credentials");
-    }
+if (!user || !user.password) {
+  throw new UnauthorizedException("Invalid credentials");
+}
 
-    const isPasswordValid = await bcrypt.compare(dto.password, user.password);
+const isPasswordValid = await bcrypt.compare(dto.password, user.password);
 
-    if (!isPasswordValid) {
-      throw new UnauthorizedException("Invalid credentials");
-    }
+if (!isPasswordValid) {
+  throw new UnauthorizedException("Invalid credentials");
+}
 
-    return this.buildResponse(user);
+return this.buildResponse(user);
   }
 
   private buildResponse(user: any) {

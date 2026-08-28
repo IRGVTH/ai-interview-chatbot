@@ -50,14 +50,15 @@ export default function LoginPage() {
     }
   }
 
-  function handleGoogleLogin() {
-    if (!API_URL) {
-      setError("NEXT_PUBLIC_API_URL is missing.");
-      return;
-    }
-
-    window.location.assign(`${API_URL}/auth/google`);
+ function handleGoogleLogin() {
+  if (!API_URL) {
+    setError("NEXT_PUBLIC_API_URL is missing.");
+    return;
   }
+
+  const googleLoginUrl = `${API_URL}/auth/google`;
+  router.push(googleLoginUrl);
+}
 
   return (
     <AuthCard

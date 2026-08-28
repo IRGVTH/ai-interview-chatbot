@@ -9,7 +9,7 @@ import { InterviewModule } from './interview/interview.module';
 import { GeminiModule } from './gemini/gemini.module';
 import { ChatModule } from './chat/chat.module';
 import { ReportModule } from './report/report.module';
-import { AdminModule } from "./admin/admin.module";
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [

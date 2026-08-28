@@ -1,5 +1,11 @@
-import { IsEmail, IsIn, IsOptional, IsString, MinLength } from "class-validator";
-import { USER_ROLES, type UserRole } from "../../common/types/role";
+import {
+  IsEmail,
+  IsIn,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
+import { USER_ROLES, type UserRole } from '../../common/types/role';
 
 export class AdminCreateUserDto {
   @IsEmail()

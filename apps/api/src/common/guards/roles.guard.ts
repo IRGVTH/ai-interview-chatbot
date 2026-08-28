@@ -3,11 +3,11 @@ import {
   ExecutionContext,
   Injectable,
   UnauthorizedException,
-} from "@nestjs/common";
-import { Reflector } from "@nestjs/core";
-import type { Request } from "express";
-import { ROLES_KEY } from "../decorators/roles.decorator";
-import type { UserRole } from "../types/role";
+} from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import type { Request } from 'express';
+import { ROLES_KEY } from '../decorators/roles.decorator';
+import type { UserRole } from '../types/role';
 
 type RequestWithUser = Request & {
   user?: {
@@ -35,7 +35,7 @@ export class RolesGuard implements CanActivate {
     const userRole = request.user?.role;
 
     if (!userRole) {
-      throw new UnauthorizedException("User role not found");
+      throw new UnauthorizedException('User role not found');
     }
 
     return requiredRoles.includes(userRole);

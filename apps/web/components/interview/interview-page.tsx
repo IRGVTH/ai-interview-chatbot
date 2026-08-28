@@ -314,67 +314,69 @@ async function handleDeleteInterview(interviewId: string) {
               </button>
             </div>
 
-            <div className="mt-5 space-y-3">
-              {interviews.length === 0 ? (
-                <div className="rounded-2xl border border-dashed p-8 text-center text-gray-500">
-                  No interviews yet. Create one on the left.
-                </div>
-              ) : (
-               interviews.map((interview) => {
-  const isSelected = selectedInterviewId === interview.id;
-
-  return (
-    <div
-      key={interview.id}
-      onClick={() => setSelectedInterviewId(interview.id)}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          setSelectedInterviewId(interview.id);
-        }
-      }}
-      className={`w-full cursor-pointer rounded-2xl border p-4 text-left transition ${
-        isSelected
-          ? "border-black bg-gray-50"
-          : "border-gray-200 hover:bg-gray-50"
-      }`}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="font-semibold">{interview.title}</h3>
-          <p className="mt-1 text-sm text-gray-500">
-            {interview.position} • {interview.experienceLevel} • {interview.difficulty}
-          </p>
-          {interview.summary ? (
-            <p className="mt-2 text-sm text-gray-600">{interview.summary}</p>
-          ) : null}
-        </div>
-
-        <div className="flex flex-col items-end gap-2">
-          <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium uppercase">
-            {interview.status}
-          </span>
-
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDeleteInterview(interview.id);
-            }}
-            className="rounded-lg border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-100"
-          >
-            Delete
-          </button>
-        </div>
-      </div>
+          <div className="mt-5 space-y-3">
+  {interviews.length === 0 ? (
+    <div className="rounded-2xl border border-dashed p-8 text-center text-gray-500">
+      No interviews yet. Create one on the left.
     </div>
-  );
-})
-                  
-                
-              )}
+  ) : (
+    interviews.map((interview) => {
+      const isSelected = selectedInterviewId === interview.id;
+
+      return (
+        <div
+          key={interview.id}
+          onClick={() => setSelectedInterviewId(interview.id)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              setSelectedInterviewId(interview.id);
+            }
+          }}
+          className={`w-full cursor-pointer rounded-2xl border p-4 text-left transition ${
+            isSelected
+              ? "border-black bg-gray-50"
+              : "border-gray-200 hover:bg-gray-50"
+          }`}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="font-semibold">{interview.title}</h3>
+              <p className="mt-1 text-sm text-gray-500">
+                {interview.position} • {interview.experienceLevel} •{" "}
+                {interview.difficulty}
+              </p>
+              {interview.summary ? (
+                <p className="mt-2 text-sm text-gray-600">
+                  {interview.summary}
+                </p>
+              ) : null}
             </div>
+
+            <div className="flex flex-col items-end gap-2">
+              <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium uppercase">
+                {interview.status}
+              </span>
+
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteInterview(interview.id);
+                }}
+                className="rounded-lg border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-100"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    })
+  )}
+</div>
+          
           </section>
         </div>
       </div>

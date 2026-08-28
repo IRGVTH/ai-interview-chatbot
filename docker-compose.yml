@@ -3,17 +3,70 @@ services:
     image: postgres:17
     container_name: ai-interview-postgres
     restart: unless-stopped
-
     environment:
       POSTGRES_USER: ai_user
       POSTGRES_PASSWORD: ai_password
       POSTGRES_DB: ai_interview
-
     ports:
       - "5432:5432"
-
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ai_user -d ai_interview"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    image: node:20-alpine
+    container_name: ai-interview-api
+    working_dir: /app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://ai_user:ai_password@postgres:5432/ai_interview?schema=public
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+    ports:
+      - "4000:4000"
+    volumes:
+      - .:/app
+      - pnpm_store:/root/.pnpm-store
+    command: >
+      sh -c "
+      corepack enable &&
+      pnpm install --frozen-lockfile &&
+      pnpm --filter @ai-interview/database db:generate &&
+      pnpm --filter api build &&
+      pnpm --filter api start:prod
+      "
+
+  web:
+    image: node:20-alpine
+    container_name: ai-interview-web
+    working_dir: /app
+    depends_on:
+      - api
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000}
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - pnpm_store:/root/.pnpm-store
+    command: >
+      sh -c "
+      corepack enable &&
+      pnpm install --frozen-lockfile &&
+      pnpm --filter web build &&
+      pnpm --filter web start -p 3000
+      "
 
 volumes:
   postgres_data:
+  pnpm_store:
+

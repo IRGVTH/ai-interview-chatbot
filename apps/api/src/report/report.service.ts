@@ -21,59 +21,61 @@ export class ReportService {
   ) {}
 
   async getOverview(userId: string) {
-    const [interviews, sessions, evaluations] = await Promise.all([
-      this.prisma.interview.findMany({
-        where: { userId },
-        orderBy: { createdAt: "desc" },
-      }),
-      this.prisma.chatSession.findMany({
-        where: { userId },
-        orderBy: { updatedAt: "desc" },
-        include: {
-          interview: true,
-          messages: {
-            take: 1,
-            orderBy: { createdAt: "desc" },
-          },
-          evaluation: true,
+     const [interviews, sessions, evaluations, totalMessages] = await Promise.all([
+    this.prisma.interview.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+    }),
+    this.prisma.chatSession.findMany({
+      where: { userId },
+      orderBy: { updatedAt: "desc" },
+      include: {
+        interview: true,
+        messages: {
+          take: 1,
+          orderBy: { createdAt: "desc" },
         },
-      }),
-      this.prisma.chatEvaluation.findMany({
-        where: {
-          session: {
-            userId,
-          },
+        evaluation: true,
+      },
+    }),
+    this.prisma.chatEvaluation.findMany({
+      where: {
+        session: {
+          userId,
         },
-        orderBy: { updatedAt: "desc" },
-      }),
-    ]);
+      },
+      orderBy: { updatedAt: "desc" },
+    }),
+    this.prisma.chatMessage.count({
+      where: {
+        session: {
+          userId,
+        },
+      },
+    }),
+  ]);
 
-   const totalMessages = sessions.reduce<number>(
-  (sum: number, session: ChatSessionItem) => sum + session.messages.length,
-  0,
-);
+  const latestSession = sessions[0] ?? null;
 
-    const latestSession = sessions[0] ?? null;
+  const avgOverall =
+    evaluations.length > 0
+      ? evaluations.reduce<number>(
+          (sum: number, item: EvaluationItem) => sum + item.overall,
+          0,
+        ) / evaluations.length
+      : 0;
 
-    const avgOverall =
-  evaluations.length > 0
-    ? evaluations.reduce<number>(
-        (sum: number, item: EvaluationItem) => sum + item.overall,
-        0,
-      ) / evaluations.length
-    : 0;
-
-    return {
-      totalInterviews: interviews.length,
-      totalSessions: sessions.length,
-      totalMessages,
-      totalEvaluations: evaluations.length,
-      averageOverall: Number(avgOverall.toFixed(2)),
-      latestSession,
-      interviews,
-      sessions,
-      evaluations,
-    };
+  return {
+    totalInterviews: interviews.length,
+    totalSessions: sessions.length,
+    totalMessages,
+    totalEvaluations: evaluations.length,
+    averageOverall: Number(avgOverall.toFixed(2)),
+    latestSession,
+    interviews,
+    sessions,
+    evaluations,
+  };
   }
 
   async getEvaluation(userId: string, sessionId: string) {

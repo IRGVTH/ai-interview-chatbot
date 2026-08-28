@@ -66,10 +66,6 @@ export function ChatPage() {
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const lastSpokenAssistantIdRef = useRef<string | null>(null);
 
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const [autoSpeak, setAutoSpeak] = useState(true);
-
   const [sessions, setSessions] = useState<SessionListItem[]>([]);
   const [activeSession, setActiveSession] = useState<ChatSession | null>(null);
   const [sessionId, setSessionId] = useState<string>(
@@ -77,6 +73,9 @@ export function ChatPage() {
   );
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [autoSpeak, setAutoSpeak] = useState(true);
   const [error, setError] = useState("");
   const [voiceError, setVoiceError] = useState("");
 
@@ -85,15 +84,17 @@ export function ChatPage() {
     return localStorage.getItem("accessToken");
   }, []);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL;
-useEffect(() => {
-  return () => {
-    stopListening();
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-    }
-  };
-}, []);
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  useEffect(() => {
+    return () => {
+      stopListening();
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
   useEffect(() => {
     async function loadSessions() {
       if (!token) {
@@ -114,7 +115,6 @@ useEffect(() => {
         if (!initialSessionId) {
           setActiveSession(null);
           setSessionId("");
-          setLoading(false);
           return;
         }
 
@@ -148,18 +148,11 @@ useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeSession?.messages]);
 
-  useEffect(() => {
-    return () => {
-      stopListening();
-      window.speechSynthesis?.cancel();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   function speakText(text: string) {
     if (typeof window === "undefined") return;
+
     if (!("speechSynthesis" in window)) {
-      setVoiceError("Speech synthesis is not supported in this browser.");
+      setVoiceError("This browser does not support voice output.");
       return;
     }
 
@@ -186,6 +179,7 @@ useEffect(() => {
         // ignore
       }
     }
+
     recognitionRef.current = null;
     setIsListening(false);
   }
@@ -194,10 +188,11 @@ useEffect(() => {
     if (typeof window === "undefined") return;
 
     const SpeechRecognitionCtor =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognitionCtor) {
-      setVoiceError("Speech recognition is not supported in this browser.");
+      setVoiceError("This browser does not support voice input.");
       return;
     }
 
@@ -295,11 +290,9 @@ useEffect(() => {
       };
     });
 
-    let assistantText = "";
-
     try {
       const res = await fetch(
-        `${API_URL}/chat/sessions/${sessionId}/messages/stream`,
+        `${apiBaseUrl}/chat/sessions/${sessionId}/messages/stream`,
         {
           method: "POST",
           headers: {
@@ -311,12 +304,21 @@ useEffect(() => {
       );
 
       if (!res.ok || !res.body) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.message || "Failed to send message");
+        let messageText = "Failed to send message";
+
+        try {
+          const data = await res.json();
+          messageText = data.message || messageText;
+        } catch {
+          // ignore
+        }
+
+        throw new Error(messageText);
       }
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
+      let assistantText = "";
 
       while (true) {
         const { value, done } = await reader.read();
@@ -346,7 +348,6 @@ useEffect(() => {
       );
 
       setActiveSession(refreshed);
-
       setSessions((prev) =>
         prev.map((item) =>
           item.id === refreshed.id
@@ -364,7 +365,11 @@ useEffect(() => {
         .reverse()
         .find((m) => m.role === "assistant");
 
-      if (autoSpeak && lastAssistant && lastAssistant.id !== lastSpokenAssistantIdRef.current) {
+      if (
+        autoSpeak &&
+        lastAssistant &&
+        lastAssistant.id !== lastSpokenAssistantIdRef.current
+      ) {
         lastSpokenAssistantIdRef.current = lastAssistant.id;
         speakText(lastAssistant.content);
       }
@@ -377,19 +382,17 @@ useEffect(() => {
           { token },
         );
         setActiveSession(refreshed);
-        const lastAssistant = refreshed.messages
-  .slice()
-  .reverse()
-  .find((m) => m.role === "assistant");
-
-if (
-  autoSpeak &&
-  lastAssistant &&
-  lastAssistant.id !== lastSpokenAssistantIdRef.current
-) {
-  lastSpokenAssistantIdRef.current = lastAssistant.id;
-  speakText(lastAssistant.content);
-}
+        setSessions((prev) =>
+          prev.map((item) =>
+            item.id === refreshed.id
+              ? {
+                  ...item,
+                  lastMessageAt: refreshed.lastMessageAt,
+                  messages: refreshed.messages,
+                }
+              : item,
+          ),
+        );
       } catch {
         // ignore
       }
@@ -409,107 +412,7 @@ if (
         method: "DELETE",
         token,
       });
-function speakText(text: string) {
-  if (typeof window === "undefined") return;
 
-  if (!("speechSynthesis" in window)) {
-    setVoiceError("This browser does not support voice output.");
-    return;
-  }
-
-  const cleaned = text.trim();
-  if (!cleaned) return;
-
-  window.speechSynthesis.cancel();
-
-  const utterance = new SpeechSynthesisUtterance(cleaned);
-  utterance.lang = "th-TH";
-  utterance.rate = 1;
-  utterance.pitch = 1;
-  utterance.volume = 1;
-
-  window.speechSynthesis.speak(utterance);
-}
-
-function stopListening() {
-  const recognition = recognitionRef.current;
-  if (recognition) {
-    try {
-      recognition.stop();
-    } catch {
-      // ignore
-    }
-  }
-
-  recognitionRef.current = null;
-  setIsListening(false);
-}
-
-function startListening() {
-  if (typeof window === "undefined") return;
-
-  const SpeechRecognitionCtor =
-    (window as any).SpeechRecognition ||
-    (window as any).webkitSpeechRecognition;
-
-  if (!SpeechRecognitionCtor) {
-    setVoiceError("This browser does not support voice input.");
-    return;
-  }
-
-  setVoiceError("");
-
-  const recognition = new SpeechRecognitionCtor();
-  recognition.continuous = false;
-  recognition.interimResults = true;
-  recognition.lang = "en-US";
-
-  let finalTranscript = "";
-
-  recognition.onresult = (event: any) => {
-    let interimTranscript = "";
-
-    for (let i = event.resultIndex; i < event.results.length; i += 1) {
-      const transcript = event.results[i][0].transcript;
-      if (event.results[i].isFinal) {
-        finalTranscript += transcript;
-      } else {
-        interimTranscript += transcript;
-      }
-    }
-
-    setMessage((finalTranscript + interimTranscript).trim());
-  };
-
-  recognition.onerror = (event: any) => {
-    setVoiceError(event?.error || "Voice input failed.");
-    setIsListening(false);
-    recognitionRef.current = null;
-  };
-
-  recognition.onend = () => {
-    setIsListening(false);
-    recognitionRef.current = null;
-  };
-
-  recognitionRef.current = recognition;
-  setIsListening(true);
-  recognition.start();
-}
-
-function handleSpeakLastResponse() {
-  if (!activeSession) return;
-
-  const lastAssistant = activeSession.messages
-    .slice()
-    .reverse()
-    .find((m) => m.role === "assistant");
-
-  if (!lastAssistant?.content) return;
-
-  lastSpokenAssistantIdRef.current = lastAssistant.id;
-  speakText(lastAssistant.content);
-}
       setActiveSession((prev) =>
         prev
           ? {
@@ -563,64 +466,116 @@ function handleSpeakLastResponse() {
 
   return (
     <main className="space-y-6">
-      <div className="mx-auto max-w-6xl">
+      <div className="mx-auto max-w-6xl space-y-6">
         <section className="rounded-3xl bg-white p-6 shadow-sm">
-          <p className="text-sm text-gray-500">Chat practice</p>
-          <h1 className="mt-1 text-3xl font-bold">Interview Chat</h1>
-          <p className="mt-2 text-gray-600">
-            Practice with Gemini, speak your answer, and let the AI reply with
-            memory from the conversation.
-          </p>
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Interview Chat</p>
+              <h1 className="text-3xl font-bold">Practice with Gemini</h1>
+              <p className="mt-1 text-gray-600">
+                Continuous chat, memory prompt, voice input, and voice reply.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => window.speechSynthesis?.cancel()}
+                className="rounded-xl border px-4 py-2 text-sm"
+              >
+                Stop voice
+              </button>
+              <button
+                type="button"
+                onClick={handleSpeakLastResponse}
+                className="rounded-xl border px-4 py-2 text-sm"
+                disabled={!activeSession?.messages?.length}
+              >
+                Read last reply
+              </button>
+              <button
+                type="button"
+                onClick={handleClearChat}
+                className="rounded-xl border px-4 py-2 text-sm"
+              >
+                Clear chat
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-gray-600">
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={autoSpeak}
+                onChange={(e) => setAutoSpeak(e.target.checked)}
+              />
+              Auto read replies
+            </label>
+
+            <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium uppercase">
+              {isStreaming ? "Streaming..." : "Ready"}
+            </span>
+            <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium uppercase">
+              {isListening ? "Listening..." : "Mic off"}
+            </span>
+          </div>
         </section>
 
         {error ? (
-          <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700">
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700">
             {error}
           </div>
         ) : null}
 
         {voiceError ? (
-          <div className="mt-3 rounded-2xl border border-yellow-200 bg-yellow-50 p-4 text-yellow-800">
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-800">
             {voiceError}
           </div>
         ) : null}
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-[320px_1fr]">
-          <aside className="rounded-3xl bg-white p-4 shadow-sm">
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold">Sessions</h2>
-              <p className="text-sm text-gray-500">
-                Choose a practice conversation
-              </p>
+        <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
+          <aside className="rounded-3xl bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold">Sessions</h2>
+                <p className="text-sm text-gray-500">Auto-select latest session</p>
+              </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="mt-4 space-y-2">
               {sessions.length === 0 ? (
                 <div className="rounded-2xl border border-dashed p-4 text-sm text-gray-500">
-                  No chat sessions yet. Create one from the Interview page.
+                  No chat sessions yet. Create one from Interviews.
                 </div>
               ) : (
-                sessions.map((session) => {
-                  const selected = session.id === sessionId;
+                sessions.map((item) => {
+                  const active = item.id === sessionId;
 
                   return (
                     <button
-                      key={session.id}
-                      onClick={() => switchSession(session.id)}
-                      className={`w-full rounded-2xl border p-3 text-left transition ${
-                        selected
+                      key={item.id}
+                      type="button"
+                      onClick={() => switchSession(item.id)}
+                      className={`w-full rounded-2xl border p-4 text-left transition ${
+                        active
                           ? "border-black bg-gray-50"
                           : "border-gray-200 hover:bg-gray-50"
                       }`}
                     >
-                      <p className="font-medium">
-                        {session.title || "Practice Chat"}
-                      </p>
-                      <p className="mt-1 text-xs text-gray-500">
-                        {session.interview.position} •{" "}
-                        {session.interview.experienceLevel} •{" "}
-                        {session.interview.difficulty}
-                      </p>
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-medium">
+                            {item.title || item.interview.title || "Practice Chat"}
+                          </p>
+                          <p className="mt-1 text-xs text-gray-500">
+                            {item.interview.position}
+                          </p>
+                        </div>
+                        <span className="rounded-full bg-gray-100 px-2 py-1 text-[10px] font-medium uppercase">
+                          {item.model}
+                        </span>
+                      </div>
                     </button>
                   );
                 })
@@ -628,118 +583,95 @@ function handleSpeakLastResponse() {
             </div>
           </aside>
 
-          <section className="flex h-[70vh] flex-col rounded-3xl bg-white shadow-sm">
-            {activeSession ? (
-              <>
-                <div className="border-b p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h2 className="text-lg font-semibold">
-                        {activeSession.title || "Practice Chat"}
-                      </h2>
-                      <p className="text-sm text-gray-500">
-                        {activeSession.interview.position} •{" "}
-                        {activeSession.interview.experienceLevel} •{" "}
-                        {activeSession.interview.difficulty}
-                      </p>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-2">
-  <button
-    onClick={() => setAutoSpeak((prev) => !prev)}
-    className={`rounded-xl border px-4 py-2 text-sm ${
-      autoSpeak ? "bg-black text-white" : "bg-white"
-    }`}
-  >
-    {autoSpeak ? "Auto speak: ON" : "Auto speak: OFF"}
-  </button>
-
-  <button
-    onClick={handleSpeakLastResponse}
-    disabled={isStreaming}
-    className="rounded-xl border px-4 py-2 text-sm disabled:opacity-50"
-  >
-    Speak last response
-  </button>
-
-  <button
-    onClick={handleClearChat}
-    disabled={isStreaming}
-    className="rounded-xl border px-4 py-2 text-sm disabled:opacity-50"
-  >
-    Clear chat
-  </button>
-</div>
-                  </div>
-
-                  <div className="mt-3 rounded-2xl bg-gray-50 p-3 text-sm text-gray-600">
-                    <span className="font-medium">Memory:</span>{" "}
-                    {activeSession.memory || "No saved memory yet."}
-                  </div>
-
-                  {isStreaming ? (
-                    <p className="mt-2 text-sm text-gray-500">
-                      Gemini is typing...
-                    </p>
-                  ) : null}
+          <section className="flex min-h-[60vh] flex-col rounded-3xl bg-white shadow-sm lg:h-[70vh]">
+            <div className="border-b p-5">
+              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold">
+                    {activeSession?.title || activeSession?.interview.title || "Chat"}
+                  </h2>
+                  <p className="text-sm text-gray-500">
+                    {activeSession?.interview.position} •{" "}
+                    {activeSession?.interview.experienceLevel} •{" "}
+                    {activeSession?.interview.difficulty}
+                  </p>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4">
-                  {activeSession.messages.length === 0 ? (
-                    <div className="flex h-full items-center justify-center text-center text-gray-500">
-                      Start the conversation by sending your first answer.
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {activeSession.messages.map((msg) => (
-                        <ChatBubble key={msg.id} message={msg} />
-                      ))}
-                      <div ref={messagesEndRef} />
-                    </div>
-                  )}
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      stopListening();
+                      startListening();
+                    }}
+                    className="rounded-xl border px-4 py-2 text-sm"
+                  >
+                    {isListening ? "Listening..." : "Use mic"}
+                  </button>
                 </div>
-
-                <form onSubmit={handleSend} className="border-t p-4">
-                  <div className="flex gap-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (isListening) {
-                          stopListening();
-                        } else {
-                          startListening();
-                        }
-                      }}
-                      className={`self-end rounded-2xl border px-4 py-3 text-sm ${
-                        isListening ? "border-red-300 bg-red-50" : "bg-white"
-                      }`}
-                    >
-                      {isListening ? "Stop Mic" : "🎤 Mic"}
-                    </button>
-
-                    <textarea
-                      className="min-h-14 flex-1 resize-none rounded-2xl border px-4 py-3 outline-none focus:ring-2 focus:ring-black/10"
-                      placeholder="Type your answer..."
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      disabled={isStreaming}
-                    />
-
-                    <button
-                      type="submit"
-                      disabled={isStreaming || !message.trim()}
-                      className="self-end rounded-2xl bg-black px-5 py-3 text-white disabled:opacity-50"
-                    >
-                      {isStreaming ? "Thinking..." : "Send"}
-                    </button>
-                  </div>
-                </form>
-              </>
-            ) : (
-              <div className="flex h-full items-center justify-center p-6 text-center text-gray-500">
-                No active session. Create a session from the Interview page.
               </div>
-            )}
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-5">
+              {activeSession?.messages?.length ? (
+                <div className="space-y-4">
+                  {activeSession.messages.map((msg) => (
+                    <MessageBubble
+                      key={msg.id}
+                      role={msg.role}
+                      content={msg.content}
+                    />
+                  ))}
+                  <div ref={messagesEndRef} />
+                </div>
+              ) : (
+                <div className="flex h-full items-center justify-center rounded-2xl border border-dashed p-8 text-center text-gray-500">
+                  Start the conversation by sending your first message.
+                </div>
+              )}
+            </div>
+
+            <form onSubmit={handleSend} className="border-t p-4">
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <textarea
+                  className="min-h-14 flex-1 resize-none rounded-2xl border px-4 py-3 outline-none focus:ring-2 focus:ring-black/10"
+                  placeholder="Type your answer..."
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      if (!isStreaming) {
+                        handleSend(e as any);
+                      }
+                    }
+                  }}
+                />
+
+                <div className="flex gap-2 sm:flex-col">
+                  <button
+                    type="submit"
+                    disabled={isStreaming || !message.trim()}
+                    className="rounded-2xl bg-black px-5 py-3 text-white disabled:opacity-50"
+                  >
+                    {isStreaming ? "Sending..." : "Send"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isListening) {
+                        stopListening();
+                      } else {
+                        startListening();
+                      }
+                    }}
+                    className="rounded-2xl border px-5 py-3"
+                  >
+                    {isListening ? "Stop mic" : "Mic"}
+                  </button>
+                </div>
+              </div>
+            </form>
           </section>
         </div>
       </div>
@@ -747,17 +679,25 @@ function handleSpeakLastResponse() {
   );
 }
 
-function ChatBubble({ message }: { message: ChatMessage }) {
-  const isUser = message.role === "user";
+function MessageBubble({
+  role,
+  content,
+}: {
+  role: "user" | "assistant";
+  content: string;
+}) {
+  const isUser = role === "user";
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-6 ${
-          isUser ? "bg-black text-white" : "bg-gray-100 text-gray-900"
+        className={`max-w-[85%] rounded-3xl px-4 py-3 text-sm leading-6 ${
+          isUser
+            ? "bg-black text-white"
+            : "border bg-white text-gray-800 shadow-sm"
         }`}
       >
-        {message.content}
+        {content || (isUser ? "..." : "Typing...")}
       </div>
     </div>
   );

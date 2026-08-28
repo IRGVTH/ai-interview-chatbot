@@ -29,13 +29,11 @@ export class AuthService {
       throw new ConflictException("Email already exists");
     }
 
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
-
     const user = await this.usersService.create({
-      email: dto.email,
-      password: hashedPassword,
-      name: dto.name,
-    });
+  email: dto.email,
+  password: dto.password,
+  name: dto.name,
+});
 
     this.logger.log(`Register success: ${user.id} (${user.email})`);
 

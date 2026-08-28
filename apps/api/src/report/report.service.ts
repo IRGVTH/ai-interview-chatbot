@@ -119,19 +119,21 @@ export class ReportService {
   }
 
   async getEvaluation(userId: string, sessionId: string) {
-    const rawSession = (await this.prisma.chatSession.findFirst({
-      where: {
-        id: sessionId,
-        userId,
-      },
-      include: {
-        interview: true,
-        messages: {
-          orderBy: { createdAt: 'asc' },
+    const rawSession = await this.asUnknown(
+      this.prisma.chatSession.findFirst({
+        where: {
+          id: sessionId,
+          userId,
         },
-        evaluation: true,
-      },
-    })) as unknown;
+        include: {
+          interview: true,
+          messages: {
+            orderBy: { createdAt: 'asc' },
+          },
+          evaluation: true,
+        },
+      }),
+    );
 
     const session = rawSession as ChatSessionItem | null;
 
@@ -143,19 +145,21 @@ export class ReportService {
   }
 
   async evaluateSession(userId: string, sessionId: string) {
-    const rawSession = (await this.prisma.chatSession.findFirst({
-      where: {
-        id: sessionId,
-        userId,
-      },
-      include: {
-        interview: true,
-        messages: {
-          orderBy: { createdAt: 'asc' },
+    const rawSession = await this.asUnknown(
+      this.prisma.chatSession.findFirst({
+        where: {
+          id: sessionId,
+          userId,
         },
-        evaluation: true,
-      },
-    })) as unknown;
+        include: {
+          interview: true,
+          messages: {
+            orderBy: { createdAt: 'asc' },
+          },
+          evaluation: true,
+        },
+      }),
+    );
 
     const session = rawSession as ChatSessionItem | null;
 
@@ -207,35 +211,39 @@ Rules:
     const result = await this.geminiService.ask(prompt);
     const parsed = this.parseEvaluation(result.text);
 
-    const rawSaved = (await this.prisma.chatEvaluation.upsert({
-      where: { sessionId: session.id },
-      create: {
-        sessionId: session.id,
-        communication: parsed.communication,
-        technical: parsed.technical,
-        confidence: parsed.confidence,
-        overall: parsed.overall,
-        strengths: parsed.strengths,
-        improvements: parsed.improvements,
-        feedback: parsed.feedback,
-        rawResponse: result.text,
-      },
-      update: {
-        communication: parsed.communication,
-        technical: parsed.technical,
-        confidence: parsed.confidence,
-        overall: parsed.overall,
-        strengths: parsed.strengths,
-        improvements: parsed.improvements,
-        feedback: parsed.feedback,
-        rawResponse: result.text,
-      },
-    })) as unknown;
+    const rawSaved = await this.asUnknown(
+      this.prisma.chatEvaluation.upsert({
+        where: { sessionId: session.id },
+        create: {
+          sessionId: session.id,
+          communication: parsed.communication,
+          technical: parsed.technical,
+          confidence: parsed.confidence,
+          overall: parsed.overall,
+          strengths: parsed.strengths,
+          improvements: parsed.improvements,
+          feedback: parsed.feedback,
+          rawResponse: result.text,
+        },
+        update: {
+          communication: parsed.communication,
+          technical: parsed.technical,
+          confidence: parsed.confidence,
+          overall: parsed.overall,
+          strengths: parsed.strengths,
+          improvements: parsed.improvements,
+          feedback: parsed.feedback,
+          rawResponse: result.text,
+        },
+      }),
+    );
 
     const saved = rawSaved as EvaluationItem;
     return saved;
   }
-
+  private asUnknown(value: unknown): unknown {
+    return value;
+  }
   private parseEvaluation(text: string): ParsedEvaluation {
     const cleaned = text
       .replace(/```json/g, '')

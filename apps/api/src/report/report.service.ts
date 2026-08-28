@@ -1,18 +1,70 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { GeminiService } from '../gemini/gemini.service';
+
 type ChatMessageItem = {
   role: string;
   content: string;
 };
 
-type ChatSessionItem = {
-  messages: ChatMessageItem[];
+type EvaluationItem = {
+  sessionId: string;
+  communication: number;
+  technical: number;
+  confidence: number;
+  overall: number;
+  strengths: string[];
+  improvements: string[];
+  feedback: string;
+  rawResponse: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 };
 
-type EvaluationItem = {
-  overall: number;
+type InterviewSummary = {
+  id: string;
+  title: string;
+  position: string;
+  experienceLevel: string;
+  difficulty: string;
+  status: string;
+  summary: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 };
+
+type ChatSessionItem = {
+  id: string;
+  title: string | null;
+  lastMessageAt: Date | null;
+  updatedAt: Date;
+  interview: InterviewSummary;
+  messages: ChatMessageItem[];
+  evaluation: EvaluationItem | null;
+};
+
+type ReportOverview = {
+  totalInterviews: number;
+  totalSessions: number;
+  totalMessages: number;
+  totalEvaluations: number;
+  averageOverall: number;
+  latestSession: ChatSessionItem | null;
+  interviews: InterviewSummary[];
+  sessions: ChatSessionItem[];
+  evaluations: EvaluationItem[];
+};
+
+type ParsedEvaluation = {
+  communication: number;
+  technical: number;
+  confidence: number;
+  overall: number;
+  strengths: string[];
+  improvements: string[];
+  feedback: string;
+};
+
 @Injectable()
 export class ReportService {
   constructor(
@@ -20,50 +72,48 @@ export class ReportService {
     private readonly geminiService: GeminiService,
   ) {}
 
-  async getOverview(userId: string) {
-    const [interviews, sessions, evaluations, totalMessages] =
-      await Promise.all([
-        this.prisma.interview.findMany({
-          where: { userId },
+  async getOverview(userId: string): Promise<ReportOverview> {
+    const interviews = (await this.prisma.interview.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+    })) as InterviewSummary[];
+
+    const sessions = (await this.prisma.chatSession.findMany({
+      where: { userId },
+      orderBy: { updatedAt: 'desc' },
+      include: {
+        interview: true,
+        messages: {
+          take: 1,
           orderBy: { createdAt: 'desc' },
-        }),
-        this.prisma.chatSession.findMany({
-          where: { userId },
-          orderBy: { updatedAt: 'desc' },
-          include: {
-            interview: true,
-            messages: {
-              take: 1,
-              orderBy: { createdAt: 'desc' },
-            },
-            evaluation: true,
-          },
-        }),
-        this.prisma.chatEvaluation.findMany({
-          where: {
-            session: {
-              userId,
-            },
-          },
-          orderBy: { updatedAt: 'desc' },
-        }),
-        this.prisma.chatMessage.count({
-          where: {
-            session: {
-              userId,
-            },
-          },
-        }),
-      ]);
+        },
+        evaluation: true,
+      },
+    })) as ChatSessionItem[];
+
+    const evaluations = (await this.prisma.chatEvaluation.findMany({
+      where: {
+        session: {
+          userId,
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+    })) as EvaluationItem[];
+
+    const totalMessages = await this.prisma.chatMessage.count({
+      where: {
+        session: {
+          userId,
+        },
+      },
+    });
 
     const latestSession = sessions[0] ?? null;
 
     const avgOverall =
       evaluations.length > 0
-        ? evaluations.reduce<number>(
-            (sum: number, item: EvaluationItem) => sum + item.overall,
-            0,
-          ) / evaluations.length
+        ? evaluations.reduce<number>((sum, item) => sum + item.overall, 0) /
+          evaluations.length
         : 0;
 
     return {
@@ -79,8 +129,11 @@ export class ReportService {
     };
   }
 
-  async getEvaluation(userId: string, sessionId: string) {
-    const session = await this.prisma.chatSession.findFirst({
+  async getEvaluation(
+    userId: string,
+    sessionId: string,
+  ): Promise<EvaluationItem | null> {
+    const session = (await this.prisma.chatSession.findFirst({
       where: {
         id: sessionId,
         userId,
@@ -92,7 +145,7 @@ export class ReportService {
         },
         evaluation: true,
       },
-    });
+    })) as ChatSessionItem | null;
 
     if (!session) {
       throw new NotFoundException('Chat session not found');
@@ -101,8 +154,11 @@ export class ReportService {
     return session.evaluation;
   }
 
-  async evaluateSession(userId: string, sessionId: string) {
-    const session = await this.prisma.chatSession.findFirst({
+  async evaluateSession(
+    userId: string,
+    sessionId: string,
+  ): Promise<EvaluationItem> {
+    const session = (await this.prisma.chatSession.findFirst({
       where: {
         id: sessionId,
         userId,
@@ -114,7 +170,7 @@ export class ReportService {
         },
         evaluation: true,
       },
-    });
+    })) as ChatSessionItem | null;
 
     if (!session) {
       throw new NotFoundException('Chat session not found');
@@ -122,7 +178,7 @@ export class ReportService {
 
     const transcript = session.messages
       .map(
-        (message: { role: string; content: string }) =>
+        (message: ChatMessageItem) =>
           `${message.role.toUpperCase()}: ${message.content}`,
       )
       .join('\n');
@@ -165,7 +221,7 @@ Rules:
     const result = await this.geminiService.ask(prompt);
     const parsed = this.parseEvaluation(result.text);
 
-    const saved = await this.prisma.chatEvaluation.upsert({
+    const saved = (await this.prisma.chatEvaluation.upsert({
       where: { sessionId: session.id },
       create: {
         sessionId: session.id,
@@ -188,12 +244,12 @@ Rules:
         feedback: parsed.feedback,
         rawResponse: result.text,
       },
-    });
+    })) as EvaluationItem;
 
     return saved;
   }
 
-  private parseEvaluation(text: string) {
+  private parseEvaluation(text: string): ParsedEvaluation {
     const cleaned = text
       .replace(/```json/g, '')
       .replace(/```/g, '')
@@ -206,7 +262,7 @@ Rules:
     }
 
     const jsonText = cleaned.slice(start, end + 1);
-    const data = JSON.parse(jsonText);
+    const data = JSON.parse(jsonText) as Record<string, unknown>;
 
     return {
       communication: this.clampScore(data.communication),

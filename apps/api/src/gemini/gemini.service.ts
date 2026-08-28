@@ -9,6 +9,15 @@ import { GoogleGenAI } from '@google/genai';
 type GeminiModel = 'gemini-3.1-flash-lite' | 'gemini-3.7-flash';
 type StreamChunk = { text?: string };
 
+type RetryableGeminiError = {
+  status?: unknown;
+  error?: {
+    code?: unknown;
+  };
+  name?: string;
+  stack?: string;
+};
+
 @Injectable()
 export class GeminiService {
   private readonly logger = new Logger(GeminiService.name);
@@ -56,19 +65,15 @@ export class GeminiService {
             model,
             attempts: attempt,
           };
-        } catch (error: any) {
+        } catch (error: unknown) {
           lastError = error;
 
-          const status = error?.status ?? error?.error?.code;
-          const isRetryable =
-            status === 429 ||
-            status === 503 ||
-            status === 408 ||
-            (typeof status === 'number' && status >= 500) ||
-            error?.name === 'TimeoutError';
+          const { status, isRetryable } = this.getRetryInfo(error, true);
 
           this.logger.warn(
-            `Gemini ask failed model=${model} attempt=${attempt} status=${status ?? 'unknown'} retryable=${isRetryable}`,
+            `Gemini ask failed model=${model} attempt=${attempt} status=${String(
+              status ?? 'unknown',
+            )} retryable=${isRetryable}`,
           );
 
           if (!isRetryable || attempt === maxAttemptsPerModel) {
@@ -112,22 +117,19 @@ export class GeminiService {
           );
 
           return {
-            stream: response as AsyncIterable<StreamChunk>,
+            stream: response as unknown as AsyncIterable<StreamChunk>,
             model,
             attempts: attempt,
           };
-        } catch (error: any) {
+        } catch (error: unknown) {
           lastError = error;
 
-          const status = error?.status ?? error?.error?.code;
-          const isRetryable =
-            status === 429 ||
-            status === 503 ||
-            status === 408 ||
-            (typeof status === 'number' && status >= 500);
+          const { status, isRetryable } = this.getRetryInfo(error, false);
 
           this.logger.warn(
-            `Gemini stream failed model=${model} attempt=${attempt} status=${status ?? 'unknown'} retryable=${isRetryable}`,
+            `Gemini stream failed model=${model} attempt=${attempt} status=${String(
+              status ?? 'unknown',
+            )} retryable=${isRetryable}`,
           );
 
           if (!isRetryable || attempt === maxAttemptsPerModel) {
@@ -150,6 +152,20 @@ export class GeminiService {
     throw new InternalServerErrorException('Gemini request failed');
   }
 
+  private getRetryInfo(error: unknown, includeTimeout: boolean) {
+    const candidate = error as RetryableGeminiError | null;
+
+    const status = candidate?.status ?? candidate?.error?.code;
+    const isRetryable =
+      status === 429 ||
+      status === 503 ||
+      status === 408 ||
+      (typeof status === 'number' && status >= 500) ||
+      (includeTimeout && candidate?.name === 'TimeoutError');
+
+    return { status, isRetryable };
+  }
+
   private getBackoffDelayMs(attempt: number) {
     const base = 1000 * Math.pow(2, attempt - 1);
     const jitter = Math.floor(Math.random() * 250);
@@ -157,11 +173,11 @@ export class GeminiService {
   }
 
   private sleep(ms: number) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    return new Promise<void>((resolve) => setTimeout(resolve, ms));
   }
 
   private async withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-    let timeoutHandle: NodeJS.Timeout | undefined;
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
 
     const timeoutPromise = new Promise<never>((_, reject) => {
       timeoutHandle = setTimeout(() => {

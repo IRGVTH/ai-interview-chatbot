@@ -1,14 +1,72 @@
-import {
-  ForbiddenException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Response } from 'express';
 import { PrismaService } from '../database/prisma.service';
 import { GeminiService } from '../gemini/gemini.service';
 import { CreateChatSessionDto } from './dto/create-chat-session.dto';
 import { SendMessageDto } from './dto/send-message.dto';
+
+type InterviewSummary = {
+  id: string;
+  title: string;
+  position: string;
+  experienceLevel: string;
+  difficulty: string;
+  status: string;
+  summary: string | null;
+};
+
+type ChatMessageRow = {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt: Date;
+};
+
+type ChatSessionCreated = {
+  id: string;
+  userId: string;
+  interviewId: string;
+  title: string;
+  lastMessageAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type ChatSessionListItem = {
+  id: string;
+  title: string | null;
+  model: string;
+  lastMessageAt: Date | null;
+  updatedAt: Date;
+  memory: string | null;
+  interview: InterviewSummary;
+  messages: ChatMessageRow[];
+};
+
+type ChatSessionDetail = {
+  id: string;
+  title: string | null;
+  memory: string | null;
+  lastMessageAt: Date | null;
+  interview: InterviewSummary;
+  messages: ChatMessageRow[];
+};
+
+type GeminiStreamChunk = {
+  text?: string;
+};
+
+type GeminiStreamResult = {
+  stream: AsyncIterable<GeminiStreamChunk>;
+  model: string;
+  attempts: number;
+};
+
+type GeminiAskResult = {
+  text: string;
+  model: string;
+  attempts: number;
+};
 
 @Injectable()
 export class ChatService {
@@ -19,17 +77,20 @@ export class ChatService {
     private readonly geminiService: GeminiService,
   ) {}
 
-  async createSession(userId: string, dto: CreateChatSessionDto) {
+  async createSession(
+    userId: string,
+    dto: CreateChatSessionDto,
+  ): Promise<ChatSessionCreated> {
     this.logger.log(
       `Create chat session user=${userId} interview=${dto.interviewId}`,
     );
 
-    const interview = await this.prisma.interview.findFirst({
+    const interview = (await this.prisma.interview.findFirst({
       where: {
         id: dto.interviewId,
         userId,
       },
-    });
+    })) as InterviewSummary | null;
 
     if (!interview) {
       this.logger.warn(
@@ -38,13 +99,13 @@ export class ChatService {
       throw new NotFoundException('Interview not found');
     }
 
-    const session = await this.prisma.chatSession.create({
+    const session = (await this.prisma.chatSession.create({
       data: {
         userId,
         interviewId: interview.id,
         title: dto.title ?? `${interview.position} Interview`,
       },
-    });
+    })) as ChatSessionCreated;
 
     this.logger.log(
       `Chat session created session=${session.id} user=${userId}`,
@@ -53,7 +114,7 @@ export class ChatService {
     return session;
   }
 
-  async findAll(userId: string) {
+  findAll(userId: string): Promise<ChatSessionListItem[]> {
     return this.prisma.chatSession.findMany({
       where: { userId },
       orderBy: { updatedAt: 'desc' },
@@ -64,11 +125,11 @@ export class ChatService {
           orderBy: { createdAt: 'desc' },
         },
       },
-    });
+    }) as Promise<ChatSessionListItem[]>;
   }
 
-  async findOne(userId: string, sessionId: string) {
-    const session = await this.prisma.chatSession.findFirst({
+  async findOne(userId: string, sessionId: string): Promise<ChatSessionDetail> {
+    const session = (await this.prisma.chatSession.findFirst({
       where: {
         id: sessionId,
         userId,
@@ -79,7 +140,7 @@ export class ChatService {
           orderBy: { createdAt: 'asc' },
         },
       },
-    });
+    })) as ChatSessionDetail | null;
 
     if (!session) {
       throw new NotFoundException('Chat session not found');
@@ -88,21 +149,31 @@ export class ChatService {
     return session;
   }
 
-  async sendMessage(userId: string, sessionId: string, dto: SendMessageDto) {
+  async sendMessage(
+    userId: string,
+    sessionId: string,
+    dto: SendMessageDto,
+  ): Promise<{
+    sessionId: string;
+    model: string;
+    attempts: number;
+    userMessage: ChatMessageRow;
+    assistantMessage: ChatMessageRow;
+  }> {
     this.logger.log(`Chat send user=${userId} session=${sessionId}`);
 
     const session = await this.findOne(userId, sessionId);
 
-    const userMessage = await this.prisma.chatMessage.create({
+    const userMessage = (await this.prisma.chatMessage.create({
       data: {
         sessionId: session.id,
         role: 'user',
         content: dto.content,
       },
-    });
+    })) as ChatMessageRow;
 
     const historyText = session.messages
-      .map((message: { role: string; content: string }) => {
+      .map((message: ChatMessageRow) => {
         return `${message.role.toUpperCase()}: ${message.content}`;
       })
       .join('\n');
@@ -118,15 +189,17 @@ export class ChatService {
       currentUserMessage: dto.content,
     });
 
-    const geminiResponse = await this.geminiService.ask(prompt);
+    const geminiResponse = (await this.geminiService.ask(
+      prompt,
+    )) as GeminiAskResult;
 
-    const assistantMessage = await this.prisma.chatMessage.create({
+    const assistantMessage = (await this.prisma.chatMessage.create({
       data: {
         sessionId: session.id,
         role: 'assistant',
         content: geminiResponse.text,
       },
-    });
+    })) as ChatMessageRow;
 
     await this.prisma.chatSession.update({
       where: { id: session.id },
@@ -151,7 +224,7 @@ export class ChatService {
     sessionId: string,
     dto: SendMessageDto,
     res: Response,
-  ) {
+  ): Promise<void> {
     this.logger.log(`Chat stream start user=${userId} session=${sessionId}`);
 
     const session = await this.findOne(userId, sessionId);
@@ -165,7 +238,7 @@ export class ChatService {
     });
 
     const historyText = session.messages
-      .map((message: { role: string; content: string }) => {
+      .map((message: ChatMessageRow) => {
         return `${message.role.toUpperCase()}: ${message.content}`;
       })
       .join('\n');
@@ -181,7 +254,9 @@ export class ChatService {
       currentUserMessage: dto.content,
     });
 
-    const gemini = await this.geminiService.stream(prompt);
+    const gemini = (await this.geminiService.stream(
+      prompt,
+    )) as GeminiStreamResult;
     let assistantText = '';
 
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
@@ -189,7 +264,7 @@ export class ChatService {
     res.setHeader('Connection', 'keep-alive');
 
     for await (const chunk of gemini.stream) {
-      const delta = chunk?.text ?? '';
+      const delta = chunk.text ?? '';
       if (!delta) continue;
 
       assistantText += delta;
@@ -216,7 +291,10 @@ export class ChatService {
     res.end();
   }
 
-  async clearMessages(userId: string, sessionId: string) {
+  async clearMessages(
+    userId: string,
+    sessionId: string,
+  ): Promise<{ success: true }> {
     this.logger.log(`Chat clear user=${userId} session=${sessionId}`);
 
     const session = await this.findOne(userId, sessionId);

@@ -10,10 +10,12 @@ async function bootstrap() {
   const frontendOrigins = process.env.FRONTEND_URL?.split(',')
     .map((item) => item.trim())
     .filter(Boolean) ?? ['http://localhost:3000'];
+
   app.enableCors({
     origin: frontendOrigins,
     credentials: true,
   });
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -21,6 +23,7 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
+
   app.useGlobalInterceptors(new HttpLoggingInterceptor());
   app.useGlobalFilters(new AllExceptionsFilter());
 

@@ -3,6 +3,7 @@ generator client {
   output       = "../../../apps/api/src/generated/prisma"
   moduleFormat = "cjs"
 }
+
 datasource db {
   provider = "postgresql"
 }

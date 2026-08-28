@@ -61,6 +61,10 @@ export class ReportService {
     private readonly geminiService: GeminiService,
   ) {}
 
+  private async toUnknown<T>(value: Promise<T>): Promise<unknown> {
+    return value;
+  }
+
   async getOverview(userId: string) {
     const interviews = (await this.prisma.interview.findMany({
       where: { userId },

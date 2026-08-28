@@ -17,6 +17,10 @@ export class CreateInterviewDto {
 
   @IsOptional()
   @IsString()
+  resumeText?: string;
+
+  @IsOptional()
+  @IsString()
   @MinLength(2)
   summary?: string;
 }

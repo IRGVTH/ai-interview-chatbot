@@ -12,6 +12,7 @@ type Interview = {
   difficulty: string;
   status: string;
   summary: string | null;
+  resumeText?: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -22,6 +23,7 @@ type CreateInterviewForm = {
   experienceLevel: string;
   difficulty: string;
   summary: string;
+  resumeText: string;
 };
 
 const POSITION_OPTIONS = [
@@ -44,11 +46,13 @@ const POSITION_OPTIONS = [
   "Cloud Engineer",
   "Database Administrator",
 ];
+
 function getErrorMessage(error: unknown, fallback = "Request failed") {
   if (error instanceof Error) return error.message;
   if (typeof error === "string") return error;
   return fallback;
 }
+
 export function InterviewPage() {
   const router = useRouter();
   const [interviews, setInterviews] = useState<Interview[]>([]);
@@ -57,14 +61,13 @@ export function InterviewPage() {
   const [error, setError] = useState("");
   const [selectedInterviewId, setSelectedInterviewId] = useState<string>("");
 
-  const [resumeName, setResumeName] = useState<string>("");
-
   const [form, setForm] = useState<CreateInterviewForm>({
     title: "",
     position: "Frontend Developer",
     experienceLevel: "0-1",
     difficulty: "easy",
     summary: "",
+    resumeText: "",
   });
 
   const token = useMemo(() => {
@@ -85,7 +88,7 @@ export function InterviewPage() {
         if (data.length > 0) {
           setSelectedInterviewId(data[0].id);
         }
-      }catch (err: unknown) {
+      } catch (err: unknown) {
         const message = getErrorMessage(err, "Failed to load interviews");
         setError(message);
 
@@ -93,9 +96,7 @@ export function InterviewPage() {
           localStorage.removeItem("accessToken");
           router.push("/login");
         }
-      }
-        
-      finally {
+      } finally {
         setLoading(false);
       }
     }
@@ -125,10 +126,10 @@ export function InterviewPage() {
         experienceLevel: "0-1",
         difficulty: "easy",
         summary: "",
+        resumeText: "",
       });
-      setResumeName("");
-    }  catch (err: unknown) {
-  setError(getErrorMessage(err, "Failed to create interview"));
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Failed to create interview"));
     } finally {
       setCreating(false);
     }
@@ -149,32 +150,34 @@ export function InterviewPage() {
 
       router.push(`/chat?sessionId=${session.id}`);
     } catch (err: unknown) {
-  setError(getErrorMessage(err, "Failed to create chat session"));
+      setError(getErrorMessage(err, "Failed to create chat session"));
     }
   }
-async function handleDeleteInterview(interviewId: string) {
-  if (!token) return;
 
-  const confirmed = window.confirm("Delete this interview?");
-  if (!confirmed) return;
+  async function handleDeleteInterview(interviewId: string) {
+    if (!token) return;
 
-  try {
-    await apiFetch(`/interviews/${interviewId}`, {
-      method: "DELETE",
-      token,
-    });
+    const confirmed = window.confirm("Delete this interview?");
+    if (!confirmed) return;
 
-    setInterviews((prev) => prev.filter((item) => item.id !== interviewId));
+    try {
+      await apiFetch(`/interviews/${interviewId}`, {
+        method: "DELETE",
+        token,
+      });
 
-    setSelectedInterviewId((prevSelected) => {
-      if (prevSelected !== interviewId) return prevSelected;
-      const remaining = interviews.filter((item) => item.id !== interviewId);
-      return remaining[0]?.id ?? "";
-    });
-  } catch (err: unknown) {
-  setError(getErrorMessage(err, "Failed to delete interview"));
+      setInterviews((prev) => prev.filter((item) => item.id !== interviewId));
+
+      setSelectedInterviewId((prevSelected) => {
+        if (prevSelected !== interviewId) return prevSelected;
+        const remaining = interviews.filter((item) => item.id !== interviewId);
+        return remaining[0]?.id ?? "";
+      });
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Failed to delete interview"));
+    }
   }
-}
+
   if (loading) {
     return (
       <div className="min-h-screen p-6">
@@ -188,7 +191,7 @@ async function handleDeleteInterview(interviewId: string) {
   }
 
   return (
-    <main className="space-y-6">
+    <main className="min-h-screen bg-gray-50 p-6">
       <div className="mx-auto max-w-6xl space-y-6">
         <section className="rounded-3xl bg-white p-6 shadow-sm">
           <p className="text-sm text-gray-500">Interview setup</p>
@@ -266,32 +269,19 @@ async function handleDeleteInterview(interviewId: string) {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium">
-                  Resume
-                </label>
-
-                <label className="flex cursor-pointer items-center justify-center rounded-xl border border-dashed px-4 py-6 text-sm text-gray-600 hover:bg-gray-50">
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      setResumeName(file ? file.name : "");
-                    }}
-                  />
-                  <span>Click to upload resume</span>
-                </label>
-
-                {resumeName ? (
-                  <p className="mt-2 text-sm text-gray-600">
-                    Selected file: <span className="font-medium">{resumeName}</span>
-                  </p>
-                ) : (
-                  <p className="mt-2 text-xs text-gray-400">
-                    PDF, DOC, DOCX only
-                  </p>
-                )}
+                <label className="mb-1 block text-sm font-medium">Resume</label>
+                <textarea
+                  className="min-h-40 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-black/10"
+                  value={form.resumeText}
+                  onChange={(e) =>
+                    setForm({ ...form, resumeText: e.target.value })
+                  }
+                  placeholder="Paste the resume text here. AI will read this before the interview."
+                />
+                <p className="mt-2 text-xs text-gray-400">
+                  For now, paste resume text here. PDF/DOCX upload can be added
+                  later.
+                </p>
               </div>
 
               <button
@@ -322,69 +312,68 @@ async function handleDeleteInterview(interviewId: string) {
               </button>
             </div>
 
-          <div className="mt-5 space-y-3">
-  {interviews.length === 0 ? (
-    <div className="rounded-2xl border border-dashed p-8 text-center text-gray-500">
-      No interviews yet. Create one on the left.
-    </div>
-  ) : (
-    interviews.map((interview) => {
-      const isSelected = selectedInterviewId === interview.id;
+            <div className="mt-5 space-y-3">
+              {interviews.length === 0 ? (
+                <div className="rounded-2xl border border-dashed p-8 text-center text-gray-500">
+                  No interviews yet. Create one on the left.
+                </div>
+              ) : (
+                interviews.map((interview) => {
+                  const isSelected = selectedInterviewId === interview.id;
 
-      return (
-        <div
-          key={interview.id}
-          onClick={() => setSelectedInterviewId(interview.id)}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              setSelectedInterviewId(interview.id);
-            }
-          }}
-          className={`w-full cursor-pointer rounded-2xl border p-4 text-left transition ${
-            isSelected
-              ? "border-black bg-gray-50"
-              : "border-gray-200 hover:bg-gray-50"
-          }`}
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h3 className="font-semibold">{interview.title}</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                {interview.position} • {interview.experienceLevel} •{" "}
-                {interview.difficulty}
-              </p>
-              {interview.summary ? (
-                <p className="mt-2 text-sm text-gray-600">
-                  {interview.summary}
-                </p>
-              ) : null}
+                  return (
+                    <div
+                      key={interview.id}
+                      onClick={() => setSelectedInterviewId(interview.id)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          setSelectedInterviewId(interview.id);
+                        }
+                      }}
+                      className={`w-full cursor-pointer rounded-2xl border p-4 text-left transition ${
+                        isSelected
+                          ? "border-black bg-gray-50"
+                          : "border-gray-200 hover:bg-gray-50"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h3 className="font-semibold">{interview.title}</h3>
+                          <p className="mt-1 text-sm text-gray-500">
+                            {interview.position} • {interview.experienceLevel} •{" "}
+                            {interview.difficulty}
+                          </p>
+                          {interview.summary ? (
+                            <p className="mt-2 text-sm text-gray-600">
+                              {interview.summary}
+                            </p>
+                          ) : null}
+                        </div>
+
+                        <div className="flex flex-col items-end gap-2">
+                          <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium uppercase">
+                            {interview.status}
+                          </span>
+
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteInterview(interview.id);
+                            }}
+                            className="rounded-lg border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-100"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
-
-            <div className="flex flex-col items-end gap-2">
-              <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium uppercase">
-                {interview.status}
-              </span>
-
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeleteInterview(interview.id);
-                }}
-                className="rounded-lg border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-100"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    })
-  )}
-</div>
-          
           </section>
         </div>
       </div>

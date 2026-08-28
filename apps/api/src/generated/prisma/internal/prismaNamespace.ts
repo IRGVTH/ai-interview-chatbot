@@ -852,6 +852,8 @@ export const InterviewScalarFieldEnum = {
   summary: 'summary',
   startedAt: 'startedAt',
   finishedAt: 'finishedAt',
+  resumeText: 'resumeText',
+  resumeUploadedAt: 'resumeUploadedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   userId: 'userId'

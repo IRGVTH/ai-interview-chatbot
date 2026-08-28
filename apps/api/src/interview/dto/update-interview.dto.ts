@@ -23,4 +23,7 @@ export class UpdateInterviewDto {
   @IsString()
   @MinLength(2)
   summary?: string;
+  @IsOptional()
+  @IsString()
+  resumeText?: string;
 }

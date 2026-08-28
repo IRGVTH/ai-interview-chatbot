@@ -13,6 +13,7 @@ type InterviewSummary = {
   difficulty: string;
   status: string;
   summary: string | null;
+  resumeText?: string | null;
 };
 
 type ChatMessageRow = {
@@ -185,6 +186,7 @@ export class ChatService {
       difficulty: session.interview.difficulty,
       summary: session.interview.summary ?? '',
       memory: session.memory ?? null,
+      resumeText: session.interview.resumeText ?? '',
       historyText,
       currentUserMessage: dto.content,
     });
@@ -250,6 +252,7 @@ export class ChatService {
       difficulty: session.interview.difficulty,
       summary: session.interview.summary ?? '',
       memory: session.memory ?? null,
+      resumeText: session.interview.resumeText ?? '',
       historyText,
       currentUserMessage: dto.content,
     });
@@ -320,6 +323,7 @@ export class ChatService {
     difficulty: string;
     summary: string;
     memory?: string | null;
+    resumeText?: string | null;
     historyText: string;
     currentUserMessage: string;
   }) {
@@ -332,11 +336,15 @@ Experience level: ${input.experienceLevel}
 Difficulty: ${input.difficulty}
 Interview summary: ${input.summary || '-'}
 
+Resume:
+${input.resumeText || 'No resume provided.'}
+
 Long-term memory summary:
 ${input.memory || 'No saved memory yet.'}
 
 Rules:
 - Ask like a real interviewer.
+- Use the resume to ask relevant follow-up questions.
 - Keep the conversation focused on the candidate's answer.
 - Be helpful but not too verbose.
 - Give short feedback when needed.

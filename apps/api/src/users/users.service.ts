@@ -20,10 +20,6 @@ export type AuthUser = SafeUser & {
   password: string | null;
 };
 
-type IdOnly = {
-  id: string;
-};
-
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
@@ -103,7 +99,6 @@ export class UsersService {
         where: { email },
         select: { id: true },
       });
-
       if (existingUser && existingUser.id !== id) {
         throw new ConflictException('Email already exists');
       }

@@ -3,12 +3,14 @@ import {
   Injectable,
   Logger,
   UnauthorizedException,
-} from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcryptjs';
-import { LoginDto } from './dto/login.dto';
-import { RegisterDto } from './dto/register.dto';
-import { UsersService, type SafeUser } from '../users/users.service';
+} from "@nestjs/common";
+import { JwtService } from "@nestjs/jwt";
+import * as bcrypt from "bcryptjs";
+import { randomUUID } from "crypto";
+import { LoginDto } from "./dto/login.dto";
+import { RegisterDto } from "./dto/register.dto";
+import { GoogleProfile } from "./strategies/google.strategy";
+import { UsersService, type SafeUser } from "../users/users.service";
 
 type AuthResponse = {
   accessToken: string;
@@ -31,7 +33,7 @@ export class AuthService {
 
     if (existingUser) {
       this.logger.warn(`Register failed (email exists): ${dto.email}`);
-      throw new ConflictException('Email already exists');
+      throw new ConflictException("Email already exists");
     }
 
     const user = await this.usersService.create({
@@ -52,14 +54,14 @@ export class AuthService {
 
     if (!user || !user.password) {
       this.logger.warn(`Login failed (user not found): ${dto.email}`);
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException("Invalid credentials");
     }
 
     const isPasswordValid = await bcrypt.compare(dto.password, user.password);
 
     if (!isPasswordValid) {
       this.logger.warn(`Login failed (wrong password): ${dto.email}`);
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException("Invalid credentials");
     }
 
     this.logger.log(`Login success: ${user.id} (${user.email})`);
@@ -74,6 +76,29 @@ export class AuthService {
     };
 
     return this.buildResponse(safeUser);
+  }
+
+  async googleLogin(googleUser: GoogleProfile): Promise<AuthResponse> {
+    this.logger.log(`Google login attempt: ${googleUser.email}`);
+
+    const existingUser = await this.usersService.findByEmailSafe(
+      googleUser.email,
+    );
+
+    if (existingUser) {
+      this.logger.log(`Google login success: ${existingUser.id} (${existingUser.email})`);
+      return this.buildResponse(existingUser);
+    }
+
+    const user = await this.usersService.create({
+      email: googleUser.email,
+      name: googleUser.name,
+      password: await bcrypt.hash(randomUUID(), 10),
+    });
+
+    this.logger.log(`Google login created user: ${user.id} (${user.email})`);
+
+    return this.buildResponse(user);
   }
 
   private buildResponse(user: SafeUser): AuthResponse {

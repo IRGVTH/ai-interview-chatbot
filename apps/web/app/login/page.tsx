@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import { AuthCard } from "@/components/auth/auth-card";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
 function getErrorMessage(error: unknown, fallback = "Request failed") {
   if (error instanceof Error) return error.message;
   if (typeof error === "string") return error;
   return fallback;
 }
+
 export default function LoginPage() {
   const router = useRouter();
   const [form, setForm] = useState({
@@ -42,11 +44,19 @@ export default function LoginPage() {
       localStorage.setItem("accessToken", data.accessToken);
       router.push("/");
     } catch (err: unknown) {
-  setError(getErrorMessage(err, "Login failed"));
-
+      setError(getErrorMessage(err, "Login failed"));
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleGoogleLogin() {
+    if (!API_URL) {
+      setError("NEXT_PUBLIC_API_URL is missing.");
+      return;
+    }
+
+    window.location.href = `${API_URL}/auth/google`;
   }
 
   return (
@@ -54,6 +64,20 @@ export default function LoginPage() {
       title="Welcome back"
       description="Login to continue your interview practice."
     >
+      <button
+        type="button"
+        onClick={handleGoogleLogin}
+        className="mb-4 w-full rounded-lg border border-gray-300 bg-white px-4 py-2 font-medium hover:bg-gray-50"
+      >
+        Continue with Google
+      </button>
+
+      <div className="mb-4 flex items-center gap-3">
+        <div className="h-px flex-1 bg-gray-200" />
+        <span className="text-xs uppercase text-gray-400">or</span>
+        <div className="h-px flex-1 bg-gray-200" />
+      </div>
+
       <form className="space-y-4" onSubmit={handleSubmit}>
         <div>
           <label className="mb-1 block text-sm font-medium">Email</label>

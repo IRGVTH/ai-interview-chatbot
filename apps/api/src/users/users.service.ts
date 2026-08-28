@@ -2,9 +2,9 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
-} from "@nestjs/common";
-import * as bcrypt from "bcryptjs";
-import { PrismaService } from "../database/prisma.service";
+} from '@nestjs/common';
+import * as bcrypt from 'bcryptjs';
+import { PrismaService } from '../database/prisma.service';
 
 export type SafeUser = {
   id: string;
@@ -70,7 +70,7 @@ export class UsersService {
     })) as IdOnly | null;
 
     if (!user) {
-      throw new NotFoundException("User not found");
+      throw new NotFoundException('User not found');
     }
 
     const updateData: {
@@ -87,7 +87,7 @@ export class UsersService {
       const email = data.email.trim().toLowerCase();
 
       if (!email) {
-        throw new ConflictException("Email is invalid");
+        throw new ConflictException('Email is invalid');
       }
 
       const existingUser = (await this.prisma.user.findUnique({
@@ -96,7 +96,7 @@ export class UsersService {
       })) as IdOnly | null;
 
       if (existingUser && existingUser.id !== id) {
-        throw new ConflictException("Email already exists");
+        throw new ConflictException('Email already exists');
       }
 
       updateData.email = email;
@@ -104,7 +104,7 @@ export class UsersService {
 
     if (data.password !== undefined) {
       if (data.password.length < 6) {
-        throw new ConflictException("Password must be at least 6 characters");
+        throw new ConflictException('Password must be at least 6 characters');
       }
 
       updateData.password = await bcrypt.hash(data.password, 10);
@@ -130,7 +130,7 @@ export class UsersService {
     })) as IdOnly | null;
 
     if (existingUser) {
-      throw new ConflictException("Email already exists");
+      throw new ConflictException('Email already exists');
     }
 
     const hashedPassword = await bcrypt.hash(data.password, 10);

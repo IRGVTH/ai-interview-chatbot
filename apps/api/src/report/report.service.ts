@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
-import { PrismaService } from "../database/prisma.service";
-import { GeminiService } from "../gemini/gemini.service";
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../database/prisma.service';
+import { GeminiService } from '../gemini/gemini.service';
 
 type ChatMessageItem = {
   role: string;
@@ -64,17 +64,17 @@ export class ReportService {
   async getOverview(userId: string) {
     const interviews = (await this.prisma.interview.findMany({
       where: { userId },
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: 'desc' },
     })) as InterviewSummary[];
 
     const sessions = (await this.prisma.chatSession.findMany({
       where: { userId },
-      orderBy: { updatedAt: "desc" },
+      orderBy: { updatedAt: 'desc' },
       include: {
         interview: true,
         messages: {
           take: 1,
-          orderBy: { createdAt: "desc" },
+          orderBy: { createdAt: 'desc' },
         },
         evaluation: true,
       },
@@ -86,7 +86,7 @@ export class ReportService {
           userId,
         },
       },
-      orderBy: { updatedAt: "desc" },
+      orderBy: { updatedAt: 'desc' },
     })) as EvaluationItem[];
 
     const totalMessages = await this.prisma.chatMessage.count({
@@ -127,14 +127,14 @@ export class ReportService {
       include: {
         interview: true,
         messages: {
-          orderBy: { createdAt: "asc" },
+          orderBy: { createdAt: 'asc' },
         },
         evaluation: true,
       },
-    })) as ChatSessionItem | null;
+    })) as unknown as ChatSessionItem | null;
 
     if (!session) {
-      throw new NotFoundException("Chat session not found");
+      throw new NotFoundException('Chat session not found');
     }
 
     return session.evaluation;
@@ -149,21 +149,21 @@ export class ReportService {
       include: {
         interview: true,
         messages: {
-          orderBy: { createdAt: "asc" },
+          orderBy: { createdAt: 'asc' },
         },
         evaluation: true,
       },
-    })) as ChatSessionItem | null;
+    })) as unknown as ChatSessionItem | null;
 
     if (!session) {
-      throw new NotFoundException("Chat session not found");
+      throw new NotFoundException('Chat session not found');
     }
 
     const transcript = session.messages
       .map((message: ChatMessageItem) => {
         return `${message.role.toUpperCase()}: ${message.content}`;
       })
-      .join("\n");
+      .join('\n');
 
     const prompt = `
 You are an interview evaluator for a university portfolio project.
@@ -173,10 +173,10 @@ Evaluate the candidate's performance based on the full conversation.
 Position: ${session.interview.position}
 Experience level: ${session.interview.experienceLevel}
 Difficulty: ${session.interview.difficulty}
-Interview title: ${session.title || "Practice Chat"}
+Interview title: ${session.title || 'Practice Chat'}
 
 Conversation transcript:
-${transcript || "No conversation yet."}
+${transcript || 'No conversation yet.'}
 
 Return ONLY valid JSON in this exact format:
 {
@@ -226,18 +226,20 @@ Rules:
         feedback: parsed.feedback,
         rawResponse: result.text,
       },
-    })) as EvaluationItem;
-
+    })) as unknown as EvaluationItem;
     return saved;
   }
 
   private parseEvaluation(text: string): ParsedEvaluation {
-    const cleaned = text.replace(/```json/g, "").replace(/```/g, "").trim();
-    const start = cleaned.indexOf("{");
-    const end = cleaned.lastIndexOf("}");
+    const cleaned = text
+      .replace(/```json/g, '')
+      .replace(/```/g, '')
+      .trim();
+    const start = cleaned.indexOf('{');
+    const end = cleaned.lastIndexOf('}');
 
     if (start === -1 || end === -1) {
-      throw new Error("Gemini did not return valid JSON");
+      throw new Error('Gemini did not return valid JSON');
     }
 
     const jsonText = cleaned.slice(start, end + 1);
@@ -248,9 +250,12 @@ Rules:
       technical: this.clampScore(data.technical),
       confidence: this.clampScore(data.confidence),
       overall: this.clampScore(data.overall),
-      strengths: this.normalizeStringArray(data.strengths, "strengths"),
-      improvements: this.normalizeStringArray(data.improvements, "improvements"),
-      feedback: String(data.feedback ?? "").trim(),
+      strengths: this.normalizeStringArray(data.strengths, 'strengths'),
+      improvements: this.normalizeStringArray(
+        data.improvements,
+        'improvements',
+      ),
+      feedback: typeof data.feedback === 'string' ? data.feedback.trim() : '',
     };
   }
 

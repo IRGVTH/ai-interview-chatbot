@@ -4,15 +4,17 @@ import { ChatPage } from "@/components/chat/chat-page";
 export const dynamic = "force-dynamic";
 
 type ChatRouteProps = {
-  searchParams?: {
+  searchParams: Promise<{
     sessionId?: string;
-  };
+  }>;
 };
 
-export default function ChatRoute({ searchParams }: ChatRouteProps) {
+export default async function ChatRoute({ searchParams }: ChatRouteProps) {
+  const { sessionId = "" } = await searchParams;
+
   return (
     <AppShell>
-      <ChatPage initialSessionId={searchParams?.sessionId ?? ""} />
+      <ChatPage initialSessionId={sessionId} />
     </AppShell>
   );
 }

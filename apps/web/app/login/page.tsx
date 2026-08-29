@@ -57,7 +57,7 @@ export default function LoginPage() {
   }
 
   const googleLoginUrl = `${API_URL}/auth/google`;
-  router.push(googleLoginUrl);
+  window.location.href = googleLoginUrl;
 }
 
   return (

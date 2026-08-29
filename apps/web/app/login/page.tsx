@@ -6,10 +6,29 @@ import { AuthCard } from "@/components/auth/auth-card";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
+function normalizeErrorMessage(
+  message: unknown,
+  fallback = "Request failed",
+): string {
+  if (typeof message === "string" && message.trim()) return message;
+
+  if (Array.isArray(message)) {
+    const joined = message.map(String).filter(Boolean).join(", ");
+    return joined || fallback;
+  }
+
+  if (message && typeof message === "object") {
+    const maybe = (message as { message?: unknown }).message;
+    return normalizeErrorMessage(maybe, fallback);
+  }
+
+  return fallback;
+}
+
 function getErrorMessage(error: unknown, fallback = "Request failed") {
   if (error instanceof Error) return error.message;
   if (typeof error === "string") return error;
-  return fallback;
+  return normalizeErrorMessage(error, fallback);
 }
 
 export default function LoginPage() {
@@ -27,6 +46,10 @@ export default function LoginPage() {
     setError("");
 
     try {
+      if (!API_URL) {
+        throw new Error("NEXT_PUBLIC_API_URL is missing.");
+      }
+
       const res = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: {
@@ -35,10 +58,12 @@ export default function LoginPage() {
         body: JSON.stringify(form),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        throw new Error(data.message || "Login failed");
+        throw new Error(
+          normalizeErrorMessage((data as { message?: unknown })?.message, "Login failed"),
+        );
       }
 
       localStorage.setItem("accessToken", data.accessToken);
@@ -50,15 +75,15 @@ export default function LoginPage() {
     }
   }
 
- function handleGoogleLogin() {
-  if (!API_URL) {
-    setError("NEXT_PUBLIC_API_URL is missing.");
-    return;
-  }
+  function handleGoogleLogin() {
+    if (!API_URL) {
+      setError("NEXT_PUBLIC_API_URL is missing.");
+      return;
+    }
 
-  const googleLoginUrl = `${API_URL}/auth/google`;
-  window.location.href = googleLoginUrl;
-}
+    const googleLoginUrl = `${API_URL}/auth/google`;
+    window.location.href = googleLoginUrl;
+  }
 
   return (
     <AuthCard

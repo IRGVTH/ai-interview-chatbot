@@ -18,7 +18,7 @@ type Interview = {
 };
 
 type CreateInterviewForm = {
-   title: string;
+  title: string;
   position: string;
   experienceLevel: string;
   difficulty: string;
@@ -48,10 +48,29 @@ const POSITION_OPTIONS = [
   "Database Administrator",
 ];
 
+function normalizeErrorMessage(
+  message: unknown,
+  fallback = "Request failed",
+): string {
+  if (typeof message === "string" && message.trim()) return message;
+
+  if (Array.isArray(message)) {
+    const joined = message.map(String).filter(Boolean).join(", ");
+    return joined || fallback;
+  }
+
+  if (message && typeof message === "object") {
+    const maybe = (message as { message?: unknown }).message;
+    return normalizeErrorMessage(maybe, fallback);
+  }
+
+  return fallback;
+}
+
 function getErrorMessage(error: unknown, fallback = "Request failed") {
   if (error instanceof Error) return error.message;
   if (typeof error === "string") return error;
-  return fallback;
+  return normalizeErrorMessage(error, fallback);
 }
 
 export function InterviewPage() {
@@ -61,16 +80,17 @@ export function InterviewPage() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const [selectedInterviewId, setSelectedInterviewId] = useState<string>("");
-const [resumeUploading, setResumeUploading] = useState(false);
-const [resumeName, setResumeName] = useState("");
+  const [resumeUploading, setResumeUploading] = useState(false);
+  const [resumeName, setResumeName] = useState("");
+
   const [form, setForm] = useState<CreateInterviewForm>({
     title: "",
     position: "Frontend Developer",
     experienceLevel: "0-1",
     difficulty: "easy",
     summary: "",
-     resumeFileName: "",
-  resumeText: "",
+    resumeFileName: "",
+    resumeText: "",
   });
 
   const token = useMemo(() => {
@@ -104,7 +124,7 @@ const [resumeName, setResumeName] = useState("");
       }
     }
 
-    loadInterviews();
+    void loadInterviews();
   }, [router, token]);
 
   async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
@@ -124,56 +144,64 @@ const [resumeName, setResumeName] = useState("");
       setInterviews((prev) => [created, ...prev]);
       setSelectedInterviewId(created.id);
       setForm({
-         title: "",
-  position: "Frontend Developer",
-  experienceLevel: "0-1",
-  difficulty: "easy",
-  summary: "",
-  resumeFileName: "",
-  resumeText: "",
+        title: "",
+        position: "Frontend Developer",
+        experienceLevel: "0-1",
+        difficulty: "easy",
+        summary: "",
+        resumeFileName: "",
+        resumeText: "",
       });
+      setResumeName("");
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Failed to create interview"));
     } finally {
       setCreating(false);
     }
   }
-async function handleResumeUpload(file: File) {
-  if (!token) return;
 
-  setResumeUploading(true);
-  setError("");
+  async function handleResumeUpload(file: File) {
+    if (!token) return;
 
-  try {
-    const formData = new FormData();
-    formData.append("file", file);
+    setResumeUploading(true);
+    setError("");
 
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/resumes/parse`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData,
-    });
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
 
-    const data = await res.json().catch(() => ({}));
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/resumes/parse`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
 
-    if (!res.ok) {
-      throw new Error(data.message || "Failed to parse resume");
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(
+          normalizeErrorMessage(data?.message, "Failed to parse resume"),
+        );
+      }
+
+      const fileName = data.fileName || file.name;
+      const text = typeof data.text === "string" ? data.text : "";
+
+      setResumeName(fileName);
+      setForm((prev) => ({
+        ...prev,
+        resumeFileName: fileName,
+        resumeText: text,
+      }));
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Failed to upload resume"));
+    } finally {
+      setResumeUploading(false);
     }
-
-    setResumeName(data.fileName || file.name);
-    setForm((prev) => ({
-      ...prev,
-      resumeFileName: data.fileName || file.name,
-      resumeText: data.text || "",
-    }));
-  } catch (err: unknown) {
-    setError(getErrorMessage(err, "Failed to upload resume"));
-  } finally {
-    setResumeUploading(false);
   }
-}
+
   async function handleStartChat() {
     if (!token || !selectedInterviewId) return;
 
@@ -308,31 +336,35 @@ async function handleResumeUpload(file: File) {
               </div>
 
               <div>
-  <label className="mb-2 block text-sm font-medium">Resume Upload</label>
+                <label className="mb-2 block text-sm font-medium">
+                  Resume Upload
+                </label>
 
-  <input
-    type="file"
-    accept=".pdf,.docx"
-    className="block w-full rounded-xl border px-3 py-2"
-    onChange={(e) => {
-      const file = e.target.files?.[0];
-      if (file) {
-        void handleResumeUpload(file);
-      }
-    }}
-    disabled={resumeUploading}
-  />
+                <input
+                  type="file"
+                  accept=".pdf,.docx"
+                  className="block w-full rounded-xl border px-3 py-2"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      void handleResumeUpload(file);
+                    }
+                  }}
+                  disabled={resumeUploading}
+                />
 
-  <p className="mt-2 text-xs text-gray-400">
-    รองรับ PDF และ DOCX
-  </p>
+                <p className="mt-2 text-xs text-gray-400">
+                  รองรับ PDF และ DOCX
+                </p>
 
-  {resumeName ? (
-    <p className="mt-2 text-sm text-gray-600">
-      Uploaded: <span className="font-medium">{resumeName}</span>
-    </p>
-  ) : null}
-</div>
+                {resumeName ? (
+                  <p className="mt-2 text-sm text-gray-600">
+                    Uploaded:{" "}
+                    <span className="font-medium">{resumeName}</span>
+                  </p>
+                ) : null}
+              </div>
+
               <button
                 type="submit"
                 disabled={creating}

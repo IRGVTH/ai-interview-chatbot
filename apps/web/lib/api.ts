@@ -4,8 +4,24 @@ type ApiOptions = {
   method?: string;
   body?: unknown;
   token?: string | null;
-};
+};function normalizeErrorMessage(
+  message: unknown,
+  fallback = "Request failed",
+): string {
+  if (typeof message === "string" && message.trim()) return message;
 
+  if (Array.isArray(message)) {
+    const joined = message.map(String).filter(Boolean).join(", ");
+    return joined || fallback;
+  }
+
+  if (message && typeof message === "object") {
+    const maybe = (message as { message?: unknown }).message;
+    return normalizeErrorMessage(maybe, fallback);
+  }
+
+  return fallback;
+}
 export async function apiFetch<T>(
   path: string,
   options: ApiOptions = {},
@@ -19,10 +35,12 @@ export async function apiFetch<T>(
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
 
-  const data = await res.json();
+   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    throw new Error(data.message || "Request failed");
+    throw new Error(
+      normalizeErrorMessage((data as { message?: unknown })?.message, "Request failed"),
+    );
   }
 
   return data as T;

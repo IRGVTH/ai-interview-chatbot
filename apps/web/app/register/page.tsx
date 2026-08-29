@@ -5,11 +5,32 @@ import { useRouter } from "next/navigation";
 import { AuthCard } from "@/components/auth/auth-card";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+function normalizeErrorMessage(
+  message: unknown,
+  fallback = "Request failed",
+): string {
+  if (typeof message === "string" && message.trim()) return message;
+
+  if (Array.isArray(message)) {
+    const joined = message.map(String).filter(Boolean).join(", ");
+    return joined || fallback;
+  }
+
+  if (message && typeof message === "object") {
+    const maybe = (message as { message?: unknown }).message;
+    return normalizeErrorMessage(maybe, fallback);
+  }
+
+  return fallback;
+}
+
 function getErrorMessage(error: unknown, fallback = "Request failed") {
   if (error instanceof Error) return error.message;
   if (typeof error === "string") return error;
-  return fallback;
+  return normalizeErrorMessage(error, fallback);
 }
+
 export default function RegisterPage() {
   const router = useRouter();
   const [form, setForm] = useState({
@@ -26,6 +47,10 @@ export default function RegisterPage() {
     setError("");
 
     try {
+      if (!API_URL) {
+        throw new Error("NEXT_PUBLIC_API_URL is missing.");
+      }
+
       const res = await fetch(`${API_URL}/auth/register`, {
         method: "POST",
         headers: {
@@ -34,16 +59,21 @@ export default function RegisterPage() {
         body: JSON.stringify(form),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        throw new Error(data.message || "Register failed");
+        throw new Error(
+          normalizeErrorMessage(
+            (data as { message?: unknown })?.message,
+            "Register failed",
+          ),
+        );
       }
 
       localStorage.setItem("accessToken", data.accessToken);
       router.push("/");
     } catch (err: unknown) {
-  setError(getErrorMessage(err, "Register failed"));
+      setError(getErrorMessage(err, "Register failed"));
     } finally {
       setLoading(false);
     }

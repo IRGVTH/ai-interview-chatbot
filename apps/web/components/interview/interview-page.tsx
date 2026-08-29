@@ -353,12 +353,12 @@ export function InterviewPage() {
                   disabled={resumeUploading}
                 />
 
-                <p className="mt-2 text-xs text-gray-400">
+                <p className="mt-2 text-xs text-gray-600 md:text-gray-400">
                   รองรับ PDF และ DOCX
                 </p>
 
                 {resumeName ? (
-                  <p className="mt-2 text-sm text-gray-600">
+                  <p className="mt-2 text-sm text-gray-700 md:text-gray-600">
                     Uploaded:{" "}
                     <span className="font-medium">{resumeName}</span>
                   </p>
@@ -379,7 +379,7 @@ export function InterviewPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-semibold">Your interviews</h2>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-700 md:text-gray-500">
                   Select one to start practicing
                 </p>
               </div>
@@ -422,12 +422,12 @@ export function InterviewPage() {
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <h3 className="font-semibold">{interview.title}</h3>
-                          <p className="mt-1 text-sm text-gray-500">
+                          <p className="mt-1 text-sm text-gray-700 md:text-gray-500">
                             {interview.position} • {interview.experienceLevel} •{" "}
                             {interview.difficulty}
                           </p>
                           {interview.summary ? (
-                            <p className="mt-2 text-sm text-gray-600">
+                            <p className="mt-2 text-sm text-gray-700 md:text-gray-600">
                               {interview.summary}
                             </p>
                           ) : null}

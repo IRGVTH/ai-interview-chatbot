@@ -9,7 +9,9 @@ async function bootstrap() {
 
   const frontendOrigins = process.env.FRONTEND_URL?.split(',')
     .map((item) => item.trim())
-    .filter(Boolean) ?? ['https://ai-interview-chatbot-web-gamma.vercel.app,http://localhost:3000'];
+    .filter(Boolean) ?? [
+    'https://ai-interview-chatbot-web-gamma.vercel.app,http://localhost:3000',
+  ];
 
   app.enableCors({
     origin: frontendOrigins,
@@ -27,7 +29,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(new HttpLoggingInterceptor());
   app.useGlobalFilters(new AllExceptionsFilter());
 
-  await app.listen(process.env.PORT ?? 4000, "0.0.0.0");
+  await app.listen(process.env.PORT ?? 4000, '0.0.0.0');
 }
 
 void bootstrap();

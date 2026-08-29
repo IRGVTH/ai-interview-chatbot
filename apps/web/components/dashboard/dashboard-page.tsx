@@ -113,11 +113,11 @@ export function DashboardPage() {
         <section className="rounded-3xl bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="text-sm text-gray-500">Welcome back</p>
+              <p className="text-sm text-gray-700 md:text-gray-500">Welcome back</p>
               <h1 className="text-3xl font-bold">
                 {user?.name || user?.email || "User"}
               </h1>
-              <p className="mt-1 text-gray-600">
+              <p className="mt-1 text-gray-700 md:text-gray-600">
                 Practice interviews, track progress, and improve with AI.
               </p>
             </div>
@@ -158,7 +158,7 @@ export function DashboardPage() {
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold">Recent Interviews</h2>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-700 md:text-gray-500">
                 Your latest interview sessions
               </p>
             </div>
@@ -184,7 +184,7 @@ export function DashboardPage() {
                 >
                   <div>
                     <h3 className="font-semibold">{interview.title}</h3>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-gray-700 md:text-gray-500">
                       {interview.position} • {interview.experienceLevel} •{" "}
                       {interview.difficulty}
                     </p>

@@ -93,7 +93,7 @@ export default function LoginPage() {
       <button
         type="button"
         onClick={handleGoogleLogin}
-        className="mb-4 w-full rounded-lg border border-gray-300 bg-white px-4 py-2 font-medium hover:bg-gray-50"
+        className="mb-4 w-full text-black rounded-lg border border-gray-300 bg-white px-4 py-2 font-medium hover:bg-gray-50"
       >
         Continue with Google
       </button>

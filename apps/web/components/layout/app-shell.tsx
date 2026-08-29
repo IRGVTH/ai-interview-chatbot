@@ -49,10 +49,10 @@ function DesktopSidebar() {
                 key={item.href}
                 href={item.href}
                 className={`block rounded-2xl px-4 py-3 text-sm font-medium transition ${
-                  active
-                    ? "bg-black text-white"
-                    : "text-gray-700 hover:bg-gray-100 hover:text-black"
-                }`}
+                active
+               ? "bg-black text-white"
+               : "text-black hover:bg-gray-100 hover:text-black md:text-gray-700"
+              }`}
               >
                 {item.label}
               </Link>
@@ -93,10 +93,10 @@ function MobileBottomNav() {
               key={item.href}
               href={item.href}
               className={`flex flex-col items-center justify-center rounded-2xl px-2 py-2 text-[11px] font-medium transition ${
-                active
-                  ? "bg-black text-white"
-                  : "text-gray-700 hover:bg-gray-100 hover:text-black"
-              }`}
+  active
+    ? "bg-black text-white"
+    : "text-black hover:bg-gray-100 hover:text-black md:text-gray-700"
+}`}
             >
               <span className="truncate">{item.label}</span>
             </Link>

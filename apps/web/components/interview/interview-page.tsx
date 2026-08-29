@@ -261,9 +261,9 @@ export function InterviewPage() {
     <main className="min-h-screen bg-gray-50 p-6">
       <div className="mx-auto max-w-6xl space-y-6">
         <section className="rounded-3xl bg-white p-6 shadow-sm">
-          <p className="text-sm text-gray-500">Interview setup</p>
+          <p className="text-sm text-black md:text-gray-500">Interview setup</p>
           <h1 className="mt-1 text-3xl font-bold">Manage your interviews</h1>
-          <p className="mt-2 text-gray-600">
+          <p className="mt-2 text-xs text-black md:text-gray-400">
             Create a new interview, pick one from your list, and start a chat
             session with Gemini.
           </p>
@@ -353,12 +353,12 @@ export function InterviewPage() {
                   disabled={resumeUploading}
                 />
 
-                <p className="mt-2 text-xs text-gray-600 md:text-gray-400">
+                <p className="mt-2 text-xs text-black md:text-gray-400">
                   รองรับ PDF และ DOCX
                 </p>
 
                 {resumeName ? (
-                  <p className="mt-2 text-sm text-gray-700 md:text-gray-600">
+                  <p className="mt-2 text-sm text-black md:text-gray-400">
                     Uploaded:{" "}
                     <span className="font-medium">{resumeName}</span>
                   </p>
@@ -422,7 +422,7 @@ export function InterviewPage() {
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <h3 className="font-semibold">{interview.title}</h3>
-                          <p className="mt-1 text-sm text-gray-700 md:text-gray-500">
+                          <p className="mt-1 text-sm text-black md:text-gray-500">
                             {interview.position} • {interview.experienceLevel} •{" "}
                             {interview.difficulty}
                           </p>

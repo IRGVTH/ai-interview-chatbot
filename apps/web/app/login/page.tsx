@@ -106,7 +106,7 @@ export default function LoginPage() {
 
       <form className="space-y-4" onSubmit={handleSubmit}>
         <div>
-          <label className="mb-1 block text-sm font-medium">Email</label>
+          <label className="mb-1 block text-sm font-medium text-black">Email</label>
           <input
             className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-black/10"
             type="email"
@@ -117,7 +117,7 @@ export default function LoginPage() {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium">Password</label>
+          <label className="mb-1 block text-sm font-medium text-black">Password</label>
           <input
             className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-black/10"
             type="password"
@@ -142,7 +142,7 @@ export default function LoginPage() {
         </button>
       </form>
 
-      <p className="mt-4 text-sm text-gray-700 md:text-gray-600">
+      <p className="mt-4 text-sm text-black md:text-gray-600">
         Don&apos;t have an account?{" "}
         <a href="/register" className="font-medium text-black underline">
           Register

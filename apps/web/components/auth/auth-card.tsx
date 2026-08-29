@@ -20,7 +20,7 @@ export function AuthCard({
     >
       <div className="mb-6">
         <h1 className="text-2xl font-bold">{title}</h1>
-        <p className="mt-1 text-sm text-gray-700 md:text-gray-500">{description}</p>
+        <p className="mt-1 text-sm text-black md:text-gray-500">{description}</p>
       </div>
       {children}
     </div>

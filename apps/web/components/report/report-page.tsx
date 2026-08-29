@@ -23,6 +23,20 @@ type ChatMessage = {
   createdAt: string;
 };
 
+type ChatEvaluation = {
+  id: string;
+  sessionId: string;
+  communication: number;
+  technical: number;
+  confidence: number;
+  overall: number;
+  strengths: string[];
+  improvements: string[];
+  feedback: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 type ChatSession = {
   id: string;
   title: string | null;
@@ -42,20 +56,6 @@ type ChatSession = {
   evaluation: ChatEvaluation | null;
 };
 
-type ChatEvaluation = {
-  id: string;
-  sessionId: string;
-  communication: number;
-  technical: number;
-  confidence: number;
-  overall: number;
-  strengths: string[];
-  improvements: string[];
-  feedback: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
 type ReportOverview = {
   totalInterviews: number;
   totalSessions: number;
@@ -67,11 +67,13 @@ type ReportOverview = {
   sessions: ChatSession[];
   evaluations: ChatEvaluation[];
 };
+
 function getErrorMessage(error: unknown, fallback = "Request failed") {
   if (error instanceof Error) return error.message;
   if (typeof error === "string") return error;
   return fallback;
 }
+
 export function ReportPage() {
   const router = useRouter();
   const [data, setData] = useState<ReportOverview | null>(null);
@@ -96,50 +98,50 @@ export function ReportPage() {
       });
       setData(overview);
     } catch (err: unknown) {
-        const message = getErrorMessage(err, "Failed to load report");
-        setError(message);
+      const message = getErrorMessage(err, "Failed to load report");
+      setError(message);
 
-        if (message.toLowerCase().includes("unauthorized")) {
-          localStorage.removeItem("accessToken");
-          router.push("/login");
-        }
+      if (message.toLowerCase().includes("unauthorized")) {
+        localStorage.removeItem("accessToken");
+        router.push("/login");
+      }
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-  let cancelled = false;
+    let cancelled = false;
 
-  void (async () => {
-    if (!token) {
-      router.push("/login");
-      return;
-    }
-
-    try {
-      const overview = await apiFetch<ReportOverview>("/report/overview", {
-        token,
-      });
-
-      if (!cancelled) {
-        setData(overview);
+    void (async () => {
+      if (!token) {
+        router.push("/login");
+        return;
       }
-    } catch (err: unknown) {
-      if (!cancelled) {
-        setError(getErrorMessage(err, "Failed to load report"));
-      }
-    } finally {
-      if (!cancelled) {
-        setLoading(false);
-      }
-    }
-  })();
 
-  return () => {
-    cancelled = true;
-  };
-}, [router, token]);
+      try {
+        const overview = await apiFetch<ReportOverview>("/report/overview", {
+          token,
+        });
+
+        if (!cancelled) {
+          setData(overview);
+        }
+      } catch (err: unknown) {
+        if (!cancelled) {
+          setError(getErrorMessage(err, "Failed to load report"));
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router, token]);
 
   async function generateScore(sessionId: string) {
     if (!token) return;
@@ -154,8 +156,8 @@ export function ReportPage() {
       });
 
       await loadReport();
-    }  catch (err: unknown) {
-  setError(getErrorMessage(err, "Failed to evaluate session"));
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Failed to evaluate session"));
     } finally {
       setEvaluatingId("");
     }
@@ -183,9 +185,9 @@ export function ReportPage() {
     <main className="min-h-screen bg-gray-50 p-6">
       <div className="mx-auto max-w-6xl space-y-6">
         <section className="rounded-3xl bg-white p-6 shadow-sm">
-          <p className="text-sm text-gray-500">Progress report</p>
-          <h1 className="mt-1 text-3xl font-bold">Interview Report</h1>
-          <p className="mt-2 text-gray-600">
+          <p className="text-sm text-black md:text-gray-500">Progress report</p>
+          <h1 className="mt-1 text-3xl font-bold text-black">Interview Report</h1>
+          <p className="mt-2 text-black md:text-gray-600">
             Track your practice and generate AI-based scoring for each session.
           </p>
         </section>
@@ -205,14 +207,14 @@ export function ReportPage() {
 
         <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="rounded-3xl bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-semibold">AI Scoring</h2>
-            <p className="text-sm text-gray-500">
+            <h2 className="text-xl font-semibold text-black">AI Scoring</h2>
+            <p className="text-sm text-black md:text-gray-500">
               Generate and review scoring for chat sessions
             </p>
 
             <div className="mt-5 space-y-3">
               {data.sessions.length === 0 ? (
-                <div className="rounded-2xl border border-dashed p-6 text-center text-gray-500">
+                <div className="rounded-2xl border border-dashed p-6 text-center text-black md:text-gray-500">
                   No sessions yet.
                 </div>
               ) : (
@@ -220,10 +222,10 @@ export function ReportPage() {
                   <div key={session.id} className="rounded-2xl border p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <h3 className="font-semibold">
+                        <h3 className="font-semibold text-black">
                           {session.title || "Practice Chat"}
                         </h3>
-                        <p className="mt-1 text-sm text-gray-500">
+                        <p className="mt-1 text-sm text-black md:text-gray-500">
                           {session.interview.position} • {session.interview.difficulty}
                         </p>
                       </div>
@@ -243,13 +245,22 @@ export function ReportPage() {
 
                     {session.evaluation ? (
                       <div className="mt-4 grid gap-3 md:grid-cols-2">
-                        <MiniStat label="Communication" value={session.evaluation.communication} />
-                        <MiniStat label="Technical" value={session.evaluation.technical} />
-                        <MiniStat label="Confidence" value={session.evaluation.confidence} />
+                        <MiniStat
+                          label="Communication"
+                          value={session.evaluation.communication}
+                        />
+                        <MiniStat
+                          label="Technical"
+                          value={session.evaluation.technical}
+                        />
+                        <MiniStat
+                          label="Confidence"
+                          value={session.evaluation.confidence}
+                        />
                         <MiniStat label="Overall" value={session.evaluation.overall} />
                       </div>
                     ) : (
-                      <p className="mt-4 text-sm text-gray-500">
+                      <p className="mt-4 text-sm text-black md:text-gray-500">
                         No AI score yet.
                       </p>
                     )}
@@ -260,21 +271,23 @@ export function ReportPage() {
           </div>
 
           <div className="rounded-3xl bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-semibold">Latest Evaluation</h2>
-            <p className="text-sm text-gray-500">Summary from Gemini scoring</p>
+            <h2 className="text-xl font-semibold text-black">Latest Evaluation</h2>
+            <p className="text-sm text-black md:text-gray-500">
+              Summary from Gemini scoring
+            </p>
 
             {latestEvaluation ? (
               <div className="mt-5 space-y-4">
                 <div className="rounded-2xl bg-gray-50 p-4">
-                  <p className="text-sm font-medium">Feedback</p>
-                  <p className="mt-2 text-sm text-gray-700">
+                  <p className="text-sm font-medium text-black">Feedback</p>
+                  <p className="mt-2 text-sm text-black md:text-gray-700">
                     {latestEvaluation.feedback}
                   </p>
                 </div>
 
                 <div className="rounded-2xl border p-4">
-                  <p className="text-sm font-medium">Strengths</p>
-                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-700">
+                  <p className="text-sm font-medium text-black">Strengths</p>
+                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-black md:text-gray-700">
                     {latestEvaluation.strengths.map((item, index) => (
                       <li key={index}>{item}</li>
                     ))}
@@ -282,8 +295,8 @@ export function ReportPage() {
                 </div>
 
                 <div className="rounded-2xl border p-4">
-                  <p className="text-sm font-medium">Improvements</p>
-                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-700">
+                  <p className="text-sm font-medium text-black">Improvements</p>
+                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-black md:text-gray-700">
                     {latestEvaluation.improvements.map((item, index) => (
                       <li key={index}>{item}</li>
                     ))}
@@ -291,7 +304,7 @@ export function ReportPage() {
                 </div>
               </div>
             ) : (
-              <div className="mt-5 rounded-2xl border border-dashed p-6 text-center text-gray-500">
+              <div className="mt-5 rounded-2xl border border-dashed p-6 text-center text-black md:text-gray-500">
                 No evaluation yet. Generate one from a session.
               </div>
             )}
@@ -305,8 +318,8 @@ export function ReportPage() {
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-3xl bg-white p-5 shadow-sm">
-      <p className="text-sm text-gray-500">{label}</p>
-      <p className="mt-2 text-3xl font-bold">{value}</p>
+      <p className="text-sm text-black md:text-gray-600">{label}</p>
+      <p className="mt-2 text-3xl font-bold text-black">{value}</p>
     </div>
   );
 }
@@ -314,8 +327,8 @@ function StatCard({ label, value }: { label: string; value: number }) {
 function MiniStat({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-2xl bg-gray-50 p-3">
-      <p className="text-xs text-gray-500">{label}</p>
-      <p className="mt-1 text-lg font-semibold">{value}</p>
+      <p className="text-xs text-black md:text-gray-500">{label}</p>
+      <p className="mt-1 text-lg font-semibold text-black">{value}</p>
     </div>
   );
 }

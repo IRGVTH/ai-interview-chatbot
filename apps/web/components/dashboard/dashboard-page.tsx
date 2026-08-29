@@ -104,7 +104,7 @@ export function DashboardPage() {
           localStorage.removeItem("accessToken");
           router.push("/login");
         }}
-        className="fixed right-4 top-4 z-50 rounded-xl border bg-white px-4 py-2 text-sm font-medium shadow-sm hover:bg-gray-50"
+        className="fixed right-4 top-4 z-50 rounded-xl border bg-white px-4 py-2 text-sm font-medium text-black shadow-sm hover:bg-gray-50"
       >
         Logout
       </button>
@@ -114,7 +114,7 @@ export function DashboardPage() {
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-sm text-black md:text-gray-500">Welcome back</p>
-              <h1 className="text-3xl font-bold">
+              <h1 className="text-3xl font-bold text-black">
                 {user?.name || user?.email || "User"}
               </h1>
               <p className="mt-1 text-black md:text-gray-600">
@@ -133,7 +133,7 @@ export function DashboardPage() {
               <button
                 type="button"
                 onClick={() => router.push("/chat")}
-                className="rounded-xl border px-4 py-2"
+                className="rounded-xl border px-4 py-2 text-black"
               >
                 Open Chat
               </button>
@@ -157,7 +157,9 @@ export function DashboardPage() {
         <section className="rounded-3xl bg-white p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-semibold">Recent Interviews</h2>
+              <h2 className="text-xl font-semibold text-black">
+                Recent Interviews
+              </h2>
               <p className="text-sm text-black md:text-gray-500">
                 Your latest interview sessions
               </p>
@@ -172,7 +174,7 @@ export function DashboardPage() {
           </div>
 
           {interviews.length === 0 ? (
-            <div className="rounded-2xl border border-dashed p-8 text-center text-gray-500">
+            <div className="rounded-2xl border border-dashed p-8 text-center text-black md:text-gray-500">
               No interviews yet. Create your first interview to start practicing.
             </div>
           ) : (
@@ -183,7 +185,7 @@ export function DashboardPage() {
                   className="flex flex-col gap-3 rounded-2xl border p-4 md:flex-row md:items-center md:justify-between"
                 >
                   <div>
-                    <h3 className="font-semibold">{interview.title}</h3>
+                    <h3 className="font-semibold text-black">{interview.title}</h3>
                     <p className="text-sm text-black md:text-gray-500">
                       {interview.position} • {interview.experienceLevel} •{" "}
                       {interview.difficulty}
@@ -191,13 +193,13 @@ export function DashboardPage() {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium uppercase">
+                    <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium uppercase text-black">
                       {interview.status}
                     </span>
                     <button
                       type="button"
                       onClick={() => router.push("/chat")}
-                      className="rounded-xl border px-3 py-2 text-sm"
+                      className="rounded-xl border px-3 py-2 text-sm text-black"
                     >
                       Continue
                     </button>
@@ -216,8 +218,7 @@ function StatCard({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-3xl bg-white p-5 shadow-sm">
       <p className="text-sm text-black md:text-gray-600">{label}</p>
-      <p className="mt-2 text-3xl font-bold">{value}</p>
+      <p className="mt-2 text-3xl font-bold text-black">{value}</p>
     </div>
   );
 }
-

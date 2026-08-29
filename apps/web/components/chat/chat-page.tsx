@@ -537,9 +537,9 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
         <section className="rounded-3xl bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="text-sm text-gray-500">Interview Chat</p>
-              <h1 className="text-3xl font-bold">Practice with Gemini</h1>
-              <p className="mt-1 text-gray-600">
+              <p className="text-sm text-black md:text-gray-500">Interview Chat</p>
+              <h1 className="text-3xl font-bold text-black">Practice with Gemini</h1>
+              <p className="mt-1 text-black md:text-gray-600">
                 Continuous chat, memory prompt, voice input, and voice reply.
               </p>
             </div>
@@ -548,14 +548,14 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
               <button
                 type="button"
                 onClick={() => window.speechSynthesis?.cancel()}
-                className="rounded-xl border px-4 py-2 text-sm"
+                className="rounded-xl border px-4 py-2 text-sm text-black"
               >
                 Stop voice
               </button>
               <button
                 type="button"
                 onClick={handleSpeakLastResponse}
-                className="rounded-xl border px-4 py-2 text-sm"
+                className="rounded-xl border px-4 py-2 text-sm text-black"
                 disabled={!activeSession?.messages?.length}
               >
                 Read last reply
@@ -563,14 +563,14 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
               <button
                 type="button"
                 onClick={handleClearChat}
-                className="rounded-xl border px-4 py-2 text-sm"
+                className="rounded-xl border px-4 py-2 text-sm text-black"
               >
                 Clear chat
               </button>
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-gray-600">
+          <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-black md:text-gray-600">
             <label className="flex items-center gap-2">
               <input
                 type="checkbox"
@@ -580,10 +580,10 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
               Auto read replies
             </label>
 
-            <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium uppercase">
+            <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium uppercase text-black">
               {isStreaming ? "Streaming..." : "Ready"}
             </span>
-            <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium uppercase">
+            <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium uppercase text-black">
               {isListening ? "Listening..." : "Mic off"}
             </span>
           </div>
@@ -605,8 +605,8 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
           <aside className="rounded-3xl bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold">Sessions</h2>
-                <p className="text-sm text-gray-500">
+                <h2 className="text-lg font-semibold text-black">Sessions</h2>
+                <p className="text-sm text-black md:text-gray-500">
                   Auto-select latest session
                 </p>
               </div>
@@ -614,7 +614,7 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
 
             <div className="mt-4 space-y-2">
               {sessions.length === 0 ? (
-                <div className="rounded-2xl border border-dashed p-4 text-sm text-gray-500">
+                <div className="rounded-2xl border border-dashed p-4 text-sm text-black md:text-gray-500">
                   No chat sessions yet. Create one from Interviews.
                 </div>
               ) : (
@@ -634,14 +634,14 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="font-medium">
+                          <p className="font-medium text-black">
                             {item.title || item.interview.title || "Practice Chat"}
                           </p>
-                          <p className="mt-1 text-xs text-gray-500">
+                          <p className="mt-1 text-xs text-black md:text-gray-500">
                             {item.interview.position}
                           </p>
                         </div>
-                        <span className="rounded-full bg-gray-100 px-2 py-1 text-[10px] font-medium uppercase">
+                        <span className="rounded-full bg-gray-100 px-2 py-1 text-[10px] font-medium uppercase text-black">
                           {item.model}
                         </span>
                       </div>
@@ -656,10 +656,10 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
             <div className="border-b p-5">
               <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <h2 className="text-xl font-semibold">
+                  <h2 className="text-xl font-semibold text-black">
                     {activeSession?.title || activeSession?.interview.title || "Chat"}
                   </h2>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-black md:text-gray-500">
                     {activeSession?.interview.position} •{" "}
                     {activeSession?.interview.experienceLevel} •{" "}
                     {activeSession?.interview.difficulty}
@@ -673,7 +673,7 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
                       stopListening();
                       startListening();
                     }}
-                    className="rounded-xl border px-4 py-2 text-sm"
+                    className="rounded-xl border px-4 py-2 text-sm text-black"
                   >
                     {isListening ? "Listening..." : "Use mic"}
                   </button>
@@ -694,7 +694,7 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
                   <div ref={messagesEndRef} />
                 </div>
               ) : (
-                <div className="flex h-full items-center justify-center rounded-2xl border border-dashed p-8 text-center text-gray-500">
+                <div className="flex h-full items-center justify-center rounded-2xl border border-dashed p-8 text-center text-black md:text-gray-500">
                   Start the conversation by sending your first message.
                 </div>
               )}
@@ -709,7 +709,7 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
             >
               <div className="flex flex-col gap-3 sm:flex-row">
                 <textarea
-                  className="min-h-14 flex-1 resize-none rounded-2xl border px-4 py-3 outline-none focus:ring-2 focus:ring-black/10"
+                  className="min-h-14 flex-1 resize-none rounded-2xl border px-4 py-3 text-black outline-none focus:ring-2 focus:ring-black/10"
                   placeholder="Type your answer..."
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
@@ -740,7 +740,7 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
                         startListening();
                       }
                     }}
-                    className="rounded-2xl border px-5 py-3"
+                    className="rounded-2xl border px-5 py-3 text-black"
                   >
                     {isListening ? "Stop mic" : "Mic"}
                   </button>
@@ -769,7 +769,7 @@ function MessageBubble({
         className={`max-w-[85%] rounded-3xl px-4 py-3 text-sm leading-6 ${
           isUser
             ? "bg-black text-white"
-            : "border bg-white text-gray-800 shadow-sm"
+            : "border bg-white text-black shadow-sm"
         }`}
       >
         {content || (isUser ? "..." : "Typing...")}

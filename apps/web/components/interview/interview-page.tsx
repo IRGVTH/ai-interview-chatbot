@@ -170,13 +170,16 @@ export function InterviewPage() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/resumes/parse`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/resumes/parse`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
         },
-        body: formData,
-      });
+      );
 
       const data = await res.json().catch(() => ({}));
 
@@ -262,7 +265,9 @@ export function InterviewPage() {
       <div className="mx-auto max-w-6xl space-y-6">
         <section className="rounded-3xl bg-white p-6 shadow-sm">
           <p className="text-sm text-black md:text-gray-500">Interview setup</p>
-          <h1 className="mt-1 text-3xl font-bold">Manage your interviews</h1>
+          <h1 className="mt-1 text-3xl font-bold text-black">
+            Manage your interviews
+          </h1>
           <p className="mt-2 text-xs text-black md:text-gray-400">
             Create a new interview, pick one from your list, and start a chat
             session with Gemini.
@@ -277,7 +282,9 @@ export function InterviewPage() {
 
         <div className="grid gap-6 lg:grid-cols-2">
           <section className="rounded-3xl bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-semibold">Create new interview</h2>
+            <h2 className="text-xl font-semibold text-black">
+              Create new interview
+            </h2>
 
             <form className="mt-5 space-y-4" onSubmit={handleCreate}>
               <Field
@@ -324,9 +331,11 @@ export function InterviewPage() {
               </div>
 
               <div>
-                <label className="mb-1 block text-sm font-medium">Summary</label>
+                <label className="mb-1 block text-sm font-medium text-black">
+                  Summary
+                </label>
                 <textarea
-                  className="min-h-28 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-black/10"
+                  className="min-h-28 w-full rounded-xl border px-3 py-2 text-black outline-none focus:ring-2 focus:ring-black/10"
                   value={form.summary}
                   onChange={(e) =>
                     setForm({ ...form, summary: e.target.value })
@@ -336,14 +345,14 @@ export function InterviewPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium">
+                <label className="mb-2 block text-sm font-medium text-black">
                   Resume Upload
                 </label>
 
                 <input
                   type="file"
                   accept=".pdf,.docx"
-                  className="block w-full rounded-xl border px-3 py-2"
+                  className="block w-full rounded-xl border px-3 py-2 text-black"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) {
@@ -359,8 +368,7 @@ export function InterviewPage() {
 
                 {resumeName ? (
                   <p className="mt-2 text-sm text-black md:text-gray-400">
-                    Uploaded:{" "}
-                    <span className="font-medium">{resumeName}</span>
+                    Uploaded: <span className="font-medium">{resumeName}</span>
                   </p>
                 ) : null}
               </div>
@@ -378,8 +386,10 @@ export function InterviewPage() {
           <section className="rounded-3xl bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold">Your interviews</h2>
-                <p className="text-sm text-gray-700 md:text-gray-500">
+                <h2 className="text-xl font-semibold text-black">
+                  Your interviews
+                </h2>
+                <p className="text-sm text-black md:text-gray-500">
                   Select one to start practicing
                 </p>
               </div>
@@ -387,7 +397,7 @@ export function InterviewPage() {
               <button
                 onClick={handleStartChat}
                 disabled={!selectedInterviewId}
-                className="rounded-xl border px-4 py-2 disabled:opacity-50"
+                className="rounded-xl border px-4 py-2 text-black disabled:opacity-50"
               >
                 Start chat
               </button>
@@ -395,7 +405,7 @@ export function InterviewPage() {
 
             <div className="mt-5 space-y-3">
               {interviews.length === 0 ? (
-                <div className="rounded-2xl border border-dashed p-8 text-center text-gray-500">
+                <div className="rounded-2xl border border-dashed p-8 text-center text-black md:text-gray-500">
                   No interviews yet. Create one on the left.
                 </div>
               ) : (
@@ -421,20 +431,22 @@ export function InterviewPage() {
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <h3 className="font-semibold">{interview.title}</h3>
+                          <h3 className="font-semibold text-black">
+                            {interview.title}
+                          </h3>
                           <p className="mt-1 text-sm text-black md:text-gray-500">
                             {interview.position} • {interview.experienceLevel} •{" "}
                             {interview.difficulty}
                           </p>
                           {interview.summary ? (
-                            <p className="mt-2 text-sm text-gray-700 md:text-gray-600">
+                            <p className="mt-2 text-sm text-black md:text-gray-600">
                               {interview.summary}
                             </p>
                           ) : null}
                         </div>
 
                         <div className="flex flex-col items-end gap-2">
-                          <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium uppercase">
+                          <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium uppercase text-black">
                             {interview.status}
                           </span>
 
@@ -475,9 +487,11 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-sm font-medium">{label}</label>
+      <label className="mb-1 block text-sm font-medium text-black">
+        {label}
+      </label>
       <input
-        className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-black/10"
+        className="w-full rounded-xl border px-3 py-2 text-black outline-none focus:ring-2 focus:ring-black/10"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
@@ -499,9 +513,11 @@ function SelectField({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-sm font-medium">{label}</label>
+      <label className="mb-1 block text-sm font-medium text-black">
+        {label}
+      </label>
       <select
-        className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-black/10"
+        className="w-full rounded-xl border px-3 py-2 text-black outline-none focus:ring-2 focus:ring-black/10"
         value={value}
         onChange={(e) => onChange(e.target.value)}
       >

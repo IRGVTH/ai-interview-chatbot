@@ -19,11 +19,13 @@ type ReportOverview = {
   totalEvaluations: number;
   averageOverall: number;
 };
+
 function getErrorMessage(error: unknown, fallback = "Request failed") {
   if (error instanceof Error) return error.message;
   if (typeof error === "string") return error;
   return fallback;
 }
+
 export function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
@@ -74,7 +76,7 @@ export function ProfilePage() {
       }
     }
 
-    loadProfile();
+    void loadProfile();
   }, [router, token]);
 
   async function handleSave(e: React.FormEvent<HTMLFormElement>) {
@@ -111,7 +113,7 @@ export function ProfilePage() {
       setPassword("");
       setSuccess("Profile updated successfully");
     } catch (err: unknown) {
-  setError(getErrorMessage(err, "Failed to update profile"));
+      setError(getErrorMessage(err, "Failed to update profile"));
     } finally {
       setSaving(false);
     }
@@ -132,9 +134,9 @@ export function ProfilePage() {
   return (
     <div className="space-y-6">
       <section className="rounded-3xl bg-white p-6 shadow-sm">
-        <p className="text-sm text-gray-500">User profile</p>
-        <h1 className="mt-1 text-3xl font-bold">Profile</h1>
-        <p className="mt-2 text-gray-600">
+        <p className="text-sm text-black md:text-gray-500">User profile</p>
+        <h1 className="mt-1 text-3xl font-bold text-black">Profile</h1>
+        <p className="mt-2 text-black md:text-gray-600">
           View your account information and update your details.
         </p>
       </section>
@@ -153,7 +155,7 @@ export function ProfilePage() {
 
       <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
         <section className="rounded-3xl bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-semibold">Account details</h2>
+          <h2 className="text-xl font-semibold text-black">Account details</h2>
 
           <form className="mt-5 space-y-4" onSubmit={handleSave}>
             <Field
@@ -212,8 +214,8 @@ export function ProfilePage() {
         </section>
 
         <section className="rounded-3xl bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-semibold">Practice summary</h2>
-          <p className="text-sm text-gray-500">
+          <h2 className="text-xl font-semibold text-black">Practice summary</h2>
+          <p className="text-sm text-black md:text-gray-500">
             Quick overview of your interview activity
           </p>
 
@@ -237,26 +239,26 @@ export function ProfilePage() {
           </div>
 
           <div className="mt-6 rounded-2xl border p-4">
-            <h3 className="font-semibold">Profile actions</h3>
+            <h3 className="font-semibold text-black">Profile actions</h3>
             <div className="mt-3 flex flex-wrap gap-3">
               <button
                 type="button"
                 onClick={() => router.push("/interviews")}
-                className="rounded-xl border px-4 py-2 text-sm"
+                className="rounded-xl border px-4 py-2 text-sm text-black"
               >
                 Go to Interviews
               </button>
               <button
                 type="button"
                 onClick={() => router.push("/chat")}
-                className="rounded-xl border px-4 py-2 text-sm"
+                className="rounded-xl border px-4 py-2 text-sm text-black"
               >
                 Go to Chat
               </button>
               <button
                 type="button"
                 onClick={() => router.push("/report")}
-                className="rounded-xl border px-4 py-2 text-sm"
+                className="rounded-xl border px-4 py-2 text-sm text-black"
               >
                 Go to Report
               </button>
@@ -285,9 +287,11 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-sm font-medium">{label}</label>
+      <label className="mb-1 block text-sm font-medium text-black">
+        {label}
+      </label>
       <input
-        className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-black/10 disabled:bg-gray-50"
+        className="w-full rounded-xl border px-3 py-2 text-black outline-none focus:ring-2 focus:ring-black/10 disabled:bg-gray-50 md:text-gray-900"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
@@ -301,8 +305,8 @@ function Field({
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-2xl bg-gray-50 p-4">
-      <p className="text-sm text-gray-500">{label}</p>
-      <p className="mt-1 text-2xl font-bold">{value}</p>
+      <p className="text-sm text-black md:text-gray-600">{label}</p>
+      <p className="mt-1 text-2xl font-bold text-black">{value}</p>
     </div>
   );
 }

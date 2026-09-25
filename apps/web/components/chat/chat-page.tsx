@@ -1,13 +1,8 @@
 "use client";
 
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type FormEvent,
-} from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { apiFetch } from "@/lib/api";
 
 type ChatMessage = {
@@ -532,15 +527,20 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
   }
 
   return (
-    <main className="space-y-6">
+    <div className="space-y-6">
       <div className="mx-auto max-w-6xl space-y-6">
         <section className="rounded-3xl bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="text-sm text-black md:text-gray-500">Interview Chat</p>
-              <h1 className="text-3xl font-bold text-black">Practice with Gemini</h1>
+              <p className="text-sm text-black md:text-gray-500">
+                Interview Chat
+              </p>
+              <h1 className="text-3xl font-bold text-black">
+                Your practice room
+              </h1>
               <p className="mt-1 text-black md:text-gray-600">
-                Continuous chat, memory prompt, voice input, and voice reply.
+                Take your time, think out loud, and practice one answer at a
+                time.
               </p>
             </div>
 
@@ -607,7 +607,7 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
               <div>
                 <h2 className="text-lg font-semibold text-black">Sessions</h2>
                 <p className="text-sm text-black md:text-gray-500">
-                  Auto-select latest session
+                  Your recent practice conversations
                 </p>
               </div>
             </div>
@@ -615,7 +615,10 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
             <div className="mt-4 space-y-2">
               {sessions.length === 0 ? (
                 <div className="rounded-2xl border border-dashed p-4 text-sm text-black md:text-gray-500">
-                  No chat sessions yet. Create one from Interviews.
+                  No sessions yet.{" "}
+                  <Link href="/interviews" className="font-semibold underline">
+                    Create an interview to begin.
+                  </Link>
                 </div>
               ) : (
                 sessions.map((item) => {
@@ -635,7 +638,9 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="font-medium text-black">
-                            {item.title || item.interview.title || "Practice Chat"}
+                            {item.title ||
+                              item.interview.title ||
+                              "Practice Chat"}
                           </p>
                           <p className="mt-1 text-xs text-black md:text-gray-500">
                             {item.interview.position}
@@ -657,7 +662,9 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
               <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                 <div>
                   <h2 className="text-xl font-semibold text-black">
-                    {activeSession?.title || activeSession?.interview.title || "Chat"}
+                    {activeSession?.title ||
+                      activeSession?.interview.title ||
+                      "Chat"}
                   </h2>
                   <p className="text-sm text-black md:text-gray-500">
                     {activeSession?.interview.position} •{" "}
@@ -681,7 +688,13 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5">
+            <div
+              role="log"
+              aria-label="Interview conversation"
+              aria-live="polite"
+              aria-busy={isStreaming}
+              className="min-h-0 flex-1 overflow-y-auto p-5"
+            >
               {activeSession?.messages?.length ? (
                 <div className="space-y-4">
                   {activeSession.messages.map((msg) => (
@@ -695,7 +708,23 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
                 </div>
               ) : (
                 <div className="flex h-full items-center justify-center rounded-2xl border border-dashed p-8 text-center text-black md:text-gray-500">
-                  Start the conversation by sending your first message.
+                  <div>
+                    <p className="font-semibold">
+                      {sessionId
+                        ? "Ready when you are."
+                        : "Your practice space is waiting."}
+                    </p>
+                    <p className="mt-2 text-sm">
+                      {sessionId
+                        ? "Introduce yourself or ask your interviewer to begin."
+                        : "Create an interview, then start a practice session."}
+                    </p>
+                    {!sessionId && (
+                      <Link className="button-primary mt-4" href="/interviews">
+                        Set up an interview
+                      </Link>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -710,11 +739,22 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
               <div className="flex flex-col gap-3 sm:flex-row">
                 <textarea
                   className="min-h-14 flex-1 resize-none rounded-2xl border px-4 py-3 text-black outline-none focus:ring-2 focus:ring-black/10"
-                  placeholder="Type your answer..."
+                  aria-label="Your interview answer"
+                  disabled={!sessionId || isStreaming}
+                  aria-describedby="composer-hint"
+                  placeholder={
+                    sessionId
+                      ? "Type your answer…"
+                      : "Choose an interview to start practicing"
+                  }
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
+                    if (
+                      e.key === "Enter" &&
+                      !e.shiftKey &&
+                      !e.nativeEvent.isComposing
+                    ) {
                       e.preventDefault();
                       if (!isStreaming) {
                         void handleSendMessage(message);
@@ -726,7 +766,7 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
                 <div className="flex gap-2 sm:flex-col">
                   <button
                     type="submit"
-                    disabled={isStreaming || !message.trim()}
+                    disabled={!sessionId || isStreaming || !message.trim()}
                     className="rounded-2xl bg-black px-5 py-3 text-white disabled:opacity-50"
                   >
                     {isStreaming ? "Sending..." : "Send"}
@@ -746,11 +786,14 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
                   </button>
                 </div>
               </div>
+              <p id="composer-hint" className="mt-2 text-xs text-gray-500">
+                Enter to send · Shift + Enter for a new line
+              </p>
             </form>
           </section>
         </div>
       </div>
-    </main>
+    </div>
   );
 }
 
@@ -766,7 +809,7 @@ function MessageBubble({
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[85%] rounded-3xl px-4 py-3 text-sm leading-6 ${
+        className={`whitespace-pre-wrap break-words max-w-[90%] rounded-2xl px-4 py-3 text-sm leading-6 ${
           isUser
             ? "bg-black text-white"
             : "border bg-white text-black shadow-sm"

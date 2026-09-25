@@ -62,7 +62,10 @@ export default function LoginPage() {
 
       if (!res.ok) {
         throw new Error(
-          normalizeErrorMessage((data as { message?: unknown })?.message, "Login failed"),
+          normalizeErrorMessage(
+            (data as { message?: unknown })?.message,
+            "Login failed",
+          ),
         );
       }
 
@@ -106,10 +109,18 @@ export default function LoginPage() {
 
       <form className="space-y-4" onSubmit={handleSubmit}>
         <div>
-          <label className="mb-1 block text-sm font-medium text-black">Email</label>
+          <label
+            htmlFor="email"
+            className="mb-1 block text-sm font-medium text-black"
+          >
+            Email
+          </label>
           <input
             className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-black/10"
             type="email"
+            id="email"
+            autoComplete="email"
+            required
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
             placeholder="you@example.com"
@@ -117,10 +128,18 @@ export default function LoginPage() {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-black">Password</label>
+          <label
+            htmlFor="password"
+            className="mb-1 block text-sm font-medium text-black"
+          >
+            Password
+          </label>
           <input
             className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-black/10"
             type="password"
+            id="password"
+            autoComplete="current-password"
+            required
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
             placeholder="••••••••"
@@ -128,7 +147,10 @@ export default function LoginPage() {
         </div>
 
         {error ? (
-          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+          <p
+            role="alert"
+            className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600"
+          >
             {error}
           </p>
         ) : null}

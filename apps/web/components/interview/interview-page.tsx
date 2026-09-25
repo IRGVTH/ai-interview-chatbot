@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 
@@ -78,6 +78,8 @@ export function InterviewPage() {
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [starting, setStarting] = useState(false);
+  const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
   const [selectedInterviewId, setSelectedInterviewId] = useState<string>("");
   const [resumeUploading, setResumeUploading] = useState(false);
@@ -109,7 +111,12 @@ export function InterviewPage() {
         const data = await apiFetch<Interview[]>("/interviews", { token });
         setInterviews(data);
         if (data.length > 0) {
-          setSelectedInterviewId(data[0].id);
+          const requested = new URLSearchParams(window.location.search).get(
+            "interviewId",
+          );
+          setSelectedInterviewId(
+            data.find((item) => item.id === requested)?.id || data[0].id,
+          );
         }
       } catch (err: unknown) {
         const message = getErrorMessage(err, "Failed to load interviews");
@@ -132,6 +139,7 @@ export function InterviewPage() {
     if (!token) return;
 
     setCreating(true);
+    setSuccess("");
     setError("");
 
     try {
@@ -153,6 +161,9 @@ export function InterviewPage() {
         resumeText: "",
       });
       setResumeName("");
+      setSuccess(
+        "Interview created. It’s selected and ready — choose Start practice to begin.",
+      );
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Failed to create interview"));
     } finally {
@@ -206,7 +217,9 @@ export function InterviewPage() {
   }
 
   async function handleStartChat() {
-    if (!token || !selectedInterviewId) return;
+    if (!token || !selectedInterviewId || starting) return;
+    setStarting(true);
+    setError("");
 
     try {
       const session = await apiFetch<{ id: string }>("/chat/sessions", {
@@ -221,6 +234,8 @@ export function InterviewPage() {
       router.push(`/chat?sessionId=${session.id}`);
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Failed to create chat session"));
+    } finally {
+      setStarting(false);
     }
   }
 
@@ -261,7 +276,7 @@ export function InterviewPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 p-6">
+    <div className="space-y-6">
       <div className="mx-auto max-w-6xl space-y-6">
         <section className="rounded-3xl bg-white p-6 shadow-sm">
           <p className="text-sm text-black md:text-gray-500">Interview setup</p>
@@ -269,11 +284,19 @@ export function InterviewPage() {
             Manage your interviews
           </h1>
           <p className="mt-2 text-xs text-black md:text-gray-400">
-            Create a new interview, pick one from your list, and start a chat
-            session with Gemini.
+            Choose your role, set the challenge, and start a conversation with
+            your AI interviewer.
           </p>
         </section>
 
+        {success && (
+          <div
+            role="status"
+            className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800"
+          >
+            {success}
+          </div>
+        )}
         {error ? (
           <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700">
             {error}
@@ -331,10 +354,14 @@ export function InterviewPage() {
               </div>
 
               <div>
-                <label className="mb-1 block text-sm font-medium text-black">
-                  Summary
+                <label
+                  htmlFor="interview-summary"
+                  className="mb-1 block text-sm font-medium text-black"
+                >
+                  Focus areas (optional)
                 </label>
                 <textarea
+                  id="interview-summary"
                   className="min-h-28 w-full rounded-xl border px-3 py-2 text-black outline-none focus:ring-2 focus:ring-black/10"
                   value={form.summary}
                   onChange={(e) =>
@@ -345,11 +372,15 @@ export function InterviewPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-black">
-                  Resume Upload
+                <label
+                  htmlFor="resume-upload"
+                  className="mb-2 block text-sm font-medium text-black"
+                >
+                  Resume (optional)
                 </label>
 
                 <input
+                  id="resume-upload"
                   type="file"
                   accept=".pdf,.docx"
                   className="block w-full rounded-xl border px-3 py-2 text-black"
@@ -363,7 +394,9 @@ export function InterviewPage() {
                 />
 
                 <p className="mt-2 text-xs text-black md:text-gray-400">
-                  รองรับ PDF และ DOCX
+                  {resumeUploading
+                    ? "Uploading and reading your resume…"
+                    : "PDF or DOCX · Add context for more relevant questions"}
                 </p>
 
                 {resumeName ? (
@@ -375,7 +408,7 @@ export function InterviewPage() {
 
               <button
                 type="submit"
-                disabled={creating}
+                disabled={creating || resumeUploading}
                 className="rounded-xl bg-black px-4 py-2 text-white disabled:opacity-60"
               >
                 {creating ? "Creating..." : "Create interview"}
@@ -396,17 +429,18 @@ export function InterviewPage() {
 
               <button
                 onClick={handleStartChat}
-                disabled={!selectedInterviewId}
+                disabled={!selectedInterviewId || starting}
                 className="rounded-xl border px-4 py-2 text-black disabled:opacity-50"
               >
-                Start chat
+                {starting ? "Starting…" : "Start practice"}
               </button>
             </div>
 
             <div className="mt-5 space-y-3">
               {interviews.length === 0 ? (
                 <div className="rounded-2xl border border-dashed p-8 text-center text-black md:text-gray-500">
-                  No interviews yet. Create one on the left.
+                  No interviews yet. Complete the form to create your first
+                  practice interview.
                 </div>
               ) : (
                 interviews.map((interview) => {
@@ -417,9 +451,12 @@ export function InterviewPage() {
                       key={interview.id}
                       onClick={() => setSelectedInterviewId(interview.id)}
                       role="button"
+                      aria-pressed={isSelected}
                       tabIndex={0}
                       onKeyDown={(e) => {
+                        if (e.target !== e.currentTarget) return;
                         if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
                           setSelectedInterviewId(interview.id);
                         }
                       }}
@@ -470,7 +507,7 @@ export function InterviewPage() {
           </section>
         </div>
       </div>
-    </main>
+    </div>
   );
 }
 
@@ -485,12 +522,15 @@ function Field({
   onChange: (value: string) => void;
   placeholder?: string;
 }) {
+  const id = useId();
   return (
     <div>
-      <label className="mb-1 block text-sm font-medium text-black">
+      <label htmlFor={id} className="mb-1 block text-sm font-medium text-black">
         {label}
       </label>
       <input
+        id={id}
+        required
         className="w-full rounded-xl border px-3 py-2 text-black outline-none focus:ring-2 focus:ring-black/10"
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -511,12 +551,14 @@ function SelectField({
   onChange: (value: string) => void;
   options: { label: string; value: string }[];
 }) {
+  const id = useId();
   return (
     <div>
-      <label className="mb-1 block text-sm font-medium text-black">
+      <label htmlFor={id} className="mb-1 block text-sm font-medium text-black">
         {label}
       </label>
       <select
+        id={id}
         className="w-full rounded-xl border px-3 py-2 text-black outline-none focus:ring-2 focus:ring-black/10"
         value={value}
         onChange={(e) => onChange(e.target.value)}

@@ -1,28 +1,19 @@
 "use client";
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
-export type Rubric = {
-  gradeScale: {
-    version: string;
-    description: string;
-    bands: { grade: string; minimum: number }[];
-  };
-  version: string;
-  min: number;
-  max: number;
-  anchors: string;
-  limitation: string;
-  dimensions: { key: string; label: string; weight: number }[];
-};
+export type { Rubric } from "./report-data";
+import { normalizeRubric, type Rubric } from "./report-data";
 export function RubricGuide({ token }: { token: string | null }) {
   const [rubric, setRubric] = useState<Rubric | null>(null);
   const [error, setError] = useState("");
   useEffect(() => {
     let live = true;
     if (token)
-      void apiFetch<Rubric>("/report/rubric", { token })
+      void apiFetch<unknown>("/report/rubric", { token })
         .then((r) => {
-          if (live) setRubric(r);
+          const parsed = normalizeRubric(r);
+          if (!parsed) throw new Error("Incomplete rubric");
+          if (live) setRubric(parsed);
         })
         .catch(() => {
           if (live) setError("โหลดเกณฑ์คะแนนไม่ได้ กรุณาโหลดหน้าใหม่");

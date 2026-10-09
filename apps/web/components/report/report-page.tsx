@@ -3,56 +3,12 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
-import { RubricGuide, type Rubric } from "./rubric-guide";
-type Evaluation = {
-  grade: string | null;
-  id: string;
-  sessionId: string;
-  technical: number;
-  communication: number;
-  language: number | null;
-  confidence: number;
-  overall: number;
-  strengths: string[];
-  improvements: string[];
-  feedback: string;
-  rubricVersion: string;
-  rubricSnapshot: Rubric | null;
-  sourceTurnVersion: number | null;
-  dimensionFeedback: Record<string, string> | null;
-  exampleAnswers:
-    { question: string; originalAnswer: string; answer: string }[] | null;
-  createdAt: string;
-  updatedAt: string;
-};
-type Session = {
-  id: string;
-  title: string | null;
-  createdAt: string;
-  turnVersion: number;
-  interview: {
-    title: string;
-    position: string;
-    interviewType: string;
-    difficulty: string;
-    status: string;
-    startedAt: string | null;
-    finishedAt: string | null;
-  };
-  evaluation: Evaluation | null;
-};
-type Overview = {
-  totalInterviews: number;
-  totalSessions: number;
-  totalMessages: number;
-  averageOverall: number | null;
-  averageGrade: string | null;
-  gradeScale: Rubric["gradeScale"];
-  averageRubricVersion: string;
-  excludedEvaluations: number;
-  sessions: Session[];
-  rubric: Rubric;
-};
+import { RubricGuide } from "./rubric-guide";
+import {
+  normalizeOverview,
+  isEvaluationCurrent,
+  type Overview,
+} from "./report-data";
 function message(err: unknown) {
   return err instanceof Error ? err.message : "ดำเนินการไม่สำเร็จ กรุณาลองใหม่";
 }
@@ -75,8 +31,9 @@ export function ReportPage() {
       router.push("/login");
       return;
     }
-    void apiFetch<Overview>("/report/overview", { token })
-      .then((r) => {
+    void apiFetch<unknown>("/report/overview", { token })
+      .then((response) => {
+        const r = normalizeOverview(response);
         if (live) {
           setData(r);
           const requested = new URLSearchParams(window.location.search).get(
@@ -105,7 +62,11 @@ export function ReportPage() {
         method: "POST",
         token,
       });
-      setData(await apiFetch<Overview>("/report/overview", { token }));
+      setData(
+        normalizeOverview(
+          await apiFetch<unknown>("/report/overview", { token }),
+        ),
+      );
     } catch (err) {
       setError(message(err));
     } finally {
@@ -199,7 +160,15 @@ export function ReportPage() {
       <p className="rounded-xl border bg-white p-4 text-sm">
         {data.gradeScale.description}
       </p>
-      <RubricGuide token={token} />
+      {data.legacyApi ? (
+        <p role="status" className="rounded-xl bg-amber-50 p-4 text-amber-900">
+          กำลังแสดงผลประเมินเดิม เกรดคำนวณจากคะแนนเดิม
+          ผลที่ยังไม่มีเวอร์ชันเกณฑ์ไม่รวมในค่าเฉลี่ย และยังส่งออก PDF
+          แบบใหม่ไม่ได้
+        </p>
+      ) : (
+        <RubricGuide token={token} />
+      )}
       {!data.sessions.length ? (
         <p>
           ยังไม่มีประวัติ{" "}
@@ -232,14 +201,15 @@ export function ReportPage() {
                 <tbody>
                   {chronological.map((s, index) => {
                     const ev = s.evaluation;
-                    const valid = ev && ev.sourceTurnVersion === s.turnVersion;
+                    const valid =
+                      isEvaluationCurrent(s) && ev?.overall !== null;
                     const prior = chronological
                       .slice(0, index)
                       .reverse()
                       .find(
                         (p) =>
                           p.evaluation &&
-                          p.evaluation.sourceTurnVersion === p.turnVersion &&
+                          isEvaluationCurrent(p) &&
                           p.evaluation.rubricVersion === ev?.rubricVersion &&
                           p.interview.position === s.interview.position &&
                           p.interview.interviewType ===
@@ -265,15 +235,24 @@ export function ReportPage() {
                         <td className="p-2">{ev?.rubricVersion ?? "—"}</td>
                         <td className="p-2">
                           {ev
-                            ? `${ev.overall}${valid ? "" : " (ต้องประเมินใหม่)"}`
+                            ? `${ev.overall ?? "ยังไม่มีคะแนน"}${ev.sourceTurnVersion === null ? " (ผลเดิม)" : valid ? "" : " (ต้องประเมินใหม่)"}`
                             : "ยังไม่ประเมิน"}
                         </td>
                         <td className="p-2">
-                          <strong>{valid ? (ev.grade ?? "—") : "—"}</strong>
+                          <strong>
+                            {ev?.sourceTurnVersion === null || valid
+                              ? (ev?.grade ?? "—")
+                              : "—"}
+                          </strong>
                         </td>
                         <td className="p-2">
-                          {valid && prior?.evaluation
-                            ? (ev.overall - prior.evaluation.overall).toFixed(1)
+                          {valid &&
+                          ev?.overall != null &&
+                          prior?.evaluation?.overall != null
+                            ? (
+                                (ev.overall ?? 0) -
+                                (prior.evaluation.overall ?? 0)
+                              ).toFixed(1)
                             : "ยังไม่มีรอบที่เทียบได้"}
                         </td>
                       </tr>
@@ -325,9 +304,7 @@ export function ReportPage() {
                       : "Generate score"}
                 </button>
                 <button
-                  disabled={
-                    !!busy || !e || e.sourceTurnVersion !== session.turnVersion
-                  }
+                  disabled={!!busy || !e || !isEvaluationCurrent(session)}
                   onClick={() => download(session.id)}
                   className="rounded-lg border p-2 disabled:opacity-50"
                 >
@@ -340,25 +317,31 @@ export function ReportPage() {
                 <>
                   <div className="flex flex-wrap items-center gap-4 rounded-xl bg-zinc-50 p-5">
                     <div>
-                      <p className="text-sm">เกรดสรุปผลการฝึก</p>
+                      <p className="text-sm">
+                        {e.sourceTurnVersion === null
+                          ? "เกรดจากคะแนนเดิม"
+                          : "เกรดสรุปผลการฝึก"}
+                      </p>
                       <strong className="text-5xl">
-                        {e.sourceTurnVersion === session.turnVersion
+                        {e.sourceTurnVersion === null ||
+                        isEvaluationCurrent(session)
                           ? (e.grade ?? "—")
                           : "—"}
                       </strong>
                     </div>
                     <div>
                       <p className="text-xl font-semibold">
-                        คะแนนรวม {e.overall} / 10
+                        คะแนนรวม {e.overall ?? "ยังไม่มีคะแนน"} / 10
                       </p>
                       <p className="text-sm">เกณฑ์ {e.rubricVersion}</p>
                     </div>
                   </div>
-                  {e.sourceTurnVersion !== session.turnVersion && (
-                    <p role="status">
-                      บทสนทนาเปลี่ยนแล้ว ต้องประเมินใหม่ก่อนส่งออก
-                    </p>
-                  )}
+                  {e.sourceTurnVersion !== null &&
+                    !isEvaluationCurrent(session) && (
+                      <p role="status">
+                        บทสนทนาเปลี่ยนแล้ว ต้องประเมินใหม่ก่อนส่งออก
+                      </p>
+                    )}
                   <p>
                     {e.rubricSnapshot?.anchors ??
                       "ผลเก่าที่ไม่มีรายละเอียดเกณฑ์ กรุณาประเมินใหม่"}

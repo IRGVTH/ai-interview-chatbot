@@ -79,3 +79,11 @@ pnpm --filter web lint
 3. Build and release API and web together, then reload open browser tabs. New interview requests require `interviewType`; answer requests require a UUID `requestId`. Older open clients must reload. Keep `dist/report/fonts` in the API deployment.
 4. Retain API `DATABASE_URL`, `JWT_SECRET`, Google OAuth and `GEMINI_API_KEY`; configure comma-separated `FRONTEND_URL` origins and the web build-time `NEXT_PUBLIC_API_URL`. Do not commit `.env` files. Confirm the configured Gemini models are available to the deployed account.
 5. Run the live acceptance checks above with two test accounts, a Thai mic and the approved AI question/answer test set. Record actual results in RTM. Commit/push alone does not apply the migration or release a production deployment.
+
+## Report compatibility fix (2026-10-09)
+
+The production Render API returned `404 Cannot GET /report/rubric` during a read-only check. The new report frontend assumed that `/report/overview` included `rubric`, `gradeScale` and versioned evaluation metadata. The previous API contract has no such fields; passing that payload directly into the new renderer can cause a client exception.
+
+The report now validates and normalizes responses before updating render state, supports the old contract, preserves saved scores, derives display grades, labels legacy results, and excludes unversioned results from the current-rubric average. Missing arrays, malformed responses and partial rubric data are handled without rendering invalid state. Legacy results cannot use the new PDF endpoint. This frontend fix does not replace the backend migration/release steps above.
+
+Verification: `pnpm --filter web test:report` passes 11 regression cases for old/current API contracts, empty history, zero/invalid scores, stale/missing versions and incomplete data. Web build passes; web lint has no errors and the same existing login navigation warning. Signed-in production verification remains pending: the test browser's Google sign-in encountered a connection failure before authentication completed.

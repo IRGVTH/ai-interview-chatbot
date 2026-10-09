@@ -3,9 +3,11 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { RubricGuide } from "@/components/report/rubric-guide";
 import { apiFetch } from "@/lib/api";
 
 type ChatMessage = {
+  requestId?: string | null;
   id: string;
   role: "user" | "assistant";
   content: string;
@@ -26,6 +28,7 @@ type ChatSession = {
     position: string;
     experienceLevel: string;
     difficulty: string;
+    interviewType: string;
     status: string;
   };
   messages: ChatMessage[];
@@ -44,6 +47,7 @@ type SessionListItem = {
     position: string;
     experienceLevel: string;
     difficulty: string;
+    interviewType: string;
     status: string;
   };
   messages: ChatMessage[];
@@ -127,6 +131,13 @@ async function readErrorMessage(response: Response, fallback: string) {
 export function ChatPage({ initialSessionId }: ChatPageProps) {
   const router = useRouter();
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const pendingRequest = useRef<{
+    sessionId: string;
+    content: string;
+    requestId: string;
+  } | null>(null);
+  const sendingRef = useRef(false);
+  const [completing, setCompleting] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const lastSpokenAssistantIdRef = useRef<string | null>(null);
 
@@ -158,6 +169,7 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     async function loadSessions() {
       if (!token) {
         router.push("/login");
@@ -169,6 +181,7 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
           token,
         });
 
+        if (cancelled) return;
         setSessions(data);
 
         const nextSessionId = initialSessionId || data[0]?.id || "";
@@ -190,8 +203,10 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
           { token },
         );
 
+        if (cancelled) return;
         setActiveSession(selected);
       } catch (err: unknown) {
+        if (cancelled) return;
         const messageText = getErrorMessage(err, "Failed to load chat");
         setError(messageText);
 
@@ -200,11 +215,14 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
           router.push("/login");
         }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
     void loadSessions();
+    return () => {
+      cancelled = true;
+    };
   }, [initialSessionId, router, token]);
 
   useEffect(() => {
@@ -236,6 +254,9 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
   function stopListening() {
     const recognition = recognitionRef.current;
     if (recognition) {
+      recognition.onresult = null;
+      recognition.onend = null;
+      recognition.onerror = null;
       try {
         recognition.stop();
       } catch {
@@ -248,7 +269,13 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
   }
 
   function startListening() {
-    if (typeof window === "undefined") return;
+    if (
+      typeof window === "undefined" ||
+      sendingRef.current ||
+      completing ||
+      activeSession?.interview.status === "completed"
+    )
+      return;
 
     const speechWindow = window as BrowserWindowWithSpeechRecognition;
     const SpeechRecognitionCtor =
@@ -284,7 +311,9 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorLike) => {
-      setVoiceError(event.error || "Voice input failed.");
+      setVoiceError(
+        `รับเสียงไม่ได้ (${event.error || "unknown"}) คุณยังแก้ข้อความและพิมพ์คำตอบได้`,
+      );
       setIsListening(false);
       recognitionRef.current = null;
     };
@@ -296,20 +325,29 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
 
     recognitionRef.current = recognition;
     setIsListening(true);
-    recognition.start();
+    try {
+      recognition.start();
+    } catch {
+      setVoiceError("เปิดไมโครโฟนไม่ได้ คุณยังพิมพ์คำตอบได้");
+      setIsListening(false);
+      recognitionRef.current = null;
+    }
   }
 
   async function switchSession(nextSessionId: string) {
-    if (!token) return;
-
-    setSessionId(nextSessionId);
-    router.replace(`/chat?sessionId=${nextSessionId}`);
+    if (!token || sendingRef.current || completing) return;
+    stopListening();
+    pendingRequest.current = null;
+    setMessage("");
+    setActiveSession(null);
 
     try {
       const selected = await apiFetch<ChatSession>(
         `/chat/sessions/${nextSessionId}`,
         { token },
       );
+      setSessionId(nextSessionId);
+      router.replace(`/chat?sessionId=${nextSessionId}`);
       setActiveSession(selected);
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Failed to load chat session"));
@@ -317,13 +355,35 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
   }
 
   async function handleSendMessage(content: string) {
-    if (!token || !sessionId || !content.trim() || isStreaming) return;
+    if (
+      !token ||
+      !sessionId ||
+      !content.trim() ||
+      activeSession?.id !== sessionId ||
+      sendingRef.current ||
+      completing ||
+      activeSession?.interview.status === "completed"
+    )
+      return;
     if (!apiBaseUrl) {
       setError("API URL is not configured");
       return;
     }
 
     const cleanedContent = content.trim();
+    sendingRef.current = true;
+    stopListening();
+    if (
+      pendingRequest.current?.sessionId !== sessionId ||
+      pendingRequest.current?.content !== cleanedContent
+    ) {
+      pendingRequest.current = {
+        sessionId,
+        content: cleanedContent,
+        requestId: crypto.randomUUID(),
+      };
+    }
+    const requestId = pendingRequest.current.requestId;
 
     setMessage("");
     setIsStreaming(true);
@@ -366,7 +426,8 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ content: cleanedContent }),
+          body: JSON.stringify({ content: cleanedContent, requestId }),
+          signal: AbortSignal.timeout(90000),
         },
       );
 
@@ -403,12 +464,12 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
       }
 
       assistantText += decoder.decode();
-
       const refreshed = await apiFetch<ChatSession>(
         `/chat/sessions/${sessionId}`,
         { token },
       );
 
+      pendingRequest.current = null;
       setActiveSession(refreshed);
       setSessions((prev) =>
         prev.map((item) =>
@@ -436,13 +497,33 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
         speakText(lastAssistant.content);
       }
     } catch (err: unknown) {
-      setError(getErrorMessage(err, "Failed to send message"));
+      setError(getErrorMessage(err, "ส่งไม่สำเร็จ กรุณาลองใหม่"));
+      setMessage(cleanedContent);
+      setActiveSession((prev) =>
+        prev
+          ? {
+              ...prev,
+              messages: prev.messages.filter(
+                (m) => m.id !== tempUserId && m.id !== tempAssistantId,
+              ),
+            }
+          : prev,
+      );
 
       try {
         const refreshed = await apiFetch<ChatSession>(
           `/chat/sessions/${sessionId}`,
           { token },
         );
+        if (
+          refreshed.messages.some(
+            (m) => m.requestId === requestId && m.role === "assistant",
+          )
+        ) {
+          pendingRequest.current = null;
+          setMessage("");
+          setError("คำตอบถูกบันทึกแล้ว โหลดบทสนทนาล่าสุดเรียบร้อย");
+        }
         setActiveSession(refreshed);
         setSessions((prev) =>
           prev.map((item) =>
@@ -459,12 +540,20 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
         // ignore
       }
     } finally {
+      sendingRef.current = false;
       setIsStreaming(false);
     }
   }
 
   async function handleClearChat() {
-    if (!token || !sessionId) return;
+    if (
+      !token ||
+      !sessionId ||
+      sendingRef.current ||
+      completing ||
+      activeSession?.interview.status === "completed"
+    )
+      return;
 
     const confirmed = window.confirm("Clear all messages in this chat?");
     if (!confirmed) return;
@@ -495,6 +584,24 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
       lastSpokenAssistantIdRef.current = null;
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Failed to clear chat"));
+    }
+  }
+
+  async function finishInterview() {
+    if (!token || !sessionId || sendingRef.current || completing) return;
+    setCompleting(true);
+    setError("");
+    stopListening();
+    try {
+      await apiFetch(`/report/sessions/${sessionId}/complete`, {
+        method: "POST",
+        token,
+      });
+      router.push(`/report?sessionId=${sessionId}`);
+    } catch (err) {
+      setError(getErrorMessage(err, "ยังจบรอบไม่สำเร็จ กรุณาลองใหม่"));
+    } finally {
+      setCompleting(false);
     }
   }
 
@@ -563,9 +670,27 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
               <button
                 type="button"
                 onClick={handleClearChat}
+                disabled={
+                  isStreaming ||
+                  completing ||
+                  activeSession?.interview.status === "completed"
+                }
                 className="rounded-xl border px-4 py-2 text-sm text-black"
               >
                 Clear chat
+              </button>
+              <button
+                type="button"
+                onClick={finishInterview}
+                disabled={
+                  isStreaming ||
+                  completing ||
+                  !activeSession?.messages.some((m) => m.role === "user") ||
+                  activeSession?.interview.status === "completed"
+                }
+                className="rounded-xl bg-black px-4 py-2 text-white disabled:opacity-50"
+              >
+                {completing ? "กำลังสรุปและบันทึก…" : "จบสัมภาษณ์และดูผล"}
               </button>
             </div>
           </div>
@@ -589,6 +714,7 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
           </div>
         </section>
 
+        <RubricGuide token={token} />
         {error ? (
           <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700">
             {error}
@@ -740,7 +866,12 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
                 <textarea
                   className="min-h-14 flex-1 resize-none rounded-2xl border px-4 py-3 text-black outline-none focus:ring-2 focus:ring-black/10"
                   aria-label="Your interview answer"
-                  disabled={!sessionId || isStreaming}
+                  disabled={
+                    !sessionId ||
+                    isStreaming ||
+                    completing ||
+                    activeSession?.interview.status === "completed"
+                  }
                   aria-describedby="composer-hint"
                   placeholder={
                     sessionId
@@ -766,7 +897,13 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
                 <div className="flex gap-2 sm:flex-col">
                   <button
                     type="submit"
-                    disabled={!sessionId || isStreaming || !message.trim()}
+                    disabled={
+                      !sessionId ||
+                      isStreaming ||
+                      completing ||
+                      activeSession?.interview.status === "completed" ||
+                      !message.trim()
+                    }
                     className="rounded-2xl bg-black px-5 py-3 text-white disabled:opacity-50"
                   >
                     {isStreaming ? "Sending..." : "Send"}
@@ -787,7 +924,8 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
                 </div>
               </div>
               <p id="composer-hint" className="mt-2 text-xs text-gray-500">
-                Enter to send · Shift + Enter for a new line
+                ตรวจและแก้ข้อความที่ถอดเสียงก่อนกด Send · Enter ส่ง · Shift +
+                Enter ขึ้นบรรทัดใหม่
               </p>
             </form>
           </section>

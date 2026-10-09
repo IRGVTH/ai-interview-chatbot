@@ -1,11 +1,21 @@
+import { Transform } from 'class-transformer';
 import { IsIn, IsOptional, IsString, MinLength } from 'class-validator';
 
 export class CreateInterviewDto {
+  @IsIn(['HR', 'Technical', 'Coding', 'Behavioral'])
+  interviewType!: string;
+
   @IsString()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @MinLength(2)
   title!: string;
 
   @IsString()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @MinLength(2)
   position!: string;
 
@@ -25,6 +35,8 @@ export class CreateInterviewDto {
 
   @IsOptional()
   @IsString()
-  @MinLength(2)
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   summary?: string;
 }

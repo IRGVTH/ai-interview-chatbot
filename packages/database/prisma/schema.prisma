@@ -31,6 +31,8 @@ model Interview {
   experienceLevel  String
   difficulty       String
   status           String   @default("draft")
+  interviewType    String   @default("Technical")
+  revision         Int      @default(0)
   summary          String?
   startedAt        DateTime?
   finishedAt       DateTime?
@@ -55,6 +57,7 @@ model ChatSession {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   memory        String?
+  turnVersion   Int      @default(0)
   userId      String
   interviewId String
 
@@ -68,10 +71,12 @@ model ChatMessage {
   id        String   @id @default(cuid())
   role      String
   content   String
+  requestId String?
   createdAt DateTime @default(now())
 
   sessionId String
   session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  @@unique([sessionId, requestId, role])
 }
 model ChatEvaluation {
   id            String   @id @default(cuid())
@@ -83,6 +88,12 @@ model ChatEvaluation {
   strengths     Json
   improvements  Json
   feedback      String
+  rubricVersion String @default("legacy-v0")
+  rubricSnapshot Json?
+  language      Float?
+  dimensionFeedback Json?
+  exampleAnswers Json?
+  sourceTurnVersion Int?
   rawResponse   String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

@@ -4,7 +4,8 @@ type ApiOptions = {
   method?: string;
   body?: unknown;
   token?: string | null;
-};function normalizeErrorMessage(
+};
+function normalizeErrorMessage(
   message: unknown,
   fallback = "Request failed",
 ): string {
@@ -27,6 +28,7 @@ export async function apiFetch<T>(
   options: ApiOptions = {},
 ): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
+    signal: AbortSignal.timeout(30000),
     method: options.method ?? "GET",
     headers: {
       "Content-Type": "application/json",
@@ -35,11 +37,14 @@ export async function apiFetch<T>(
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
 
-   const data = await res.json().catch(() => ({}));
+  const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
     throw new Error(
-      normalizeErrorMessage((data as { message?: unknown })?.message, "Request failed"),
+      normalizeErrorMessage(
+        (data as { message?: unknown })?.message,
+        "Request failed",
+      ),
     );
   }
 

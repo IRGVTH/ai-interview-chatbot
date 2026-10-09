@@ -27,13 +27,14 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthResponse> {
-    this.logger.log(`Register attempt: ${dto.email}`);
+    dto.email = dto.email.trim().toLowerCase();
+    this.logger.log('Register attempt');
 
     const existingUser = await this.usersService.findByEmail(dto.email);
 
     if (existingUser) {
       this.logger.warn(`Register failed (email exists): ${dto.email}`);
-      throw new ConflictException('Email already exists');
+      throw new ConflictException('Unable to register with these details');
     }
 
     const user = await this.usersService.create({

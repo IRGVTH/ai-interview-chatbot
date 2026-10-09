@@ -100,7 +100,7 @@ export class UsersService {
         select: { id: true },
       });
       if (existingUser && existingUser.id !== id) {
-        throw new ConflictException('Email already exists');
+        throw new ConflictException('Unable to use these details');
       }
 
       updateData.email = email;
@@ -180,7 +180,7 @@ export class UsersService {
       });
 
       if (existingUser && existingUser.id !== id) {
-        throw new ConflictException('Email already exists');
+        throw new ConflictException('Unable to use these details');
       }
 
       updateData.email = email;
@@ -235,19 +235,30 @@ export class UsersService {
     });
 
     if (existingUser) {
-      throw new ConflictException('Email already exists');
+      throw new ConflictException('Unable to use these details');
     }
 
     const hashedPassword = await bcrypt.hash(data.password, 10);
 
-    return this.prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        name: data.name?.trim() || null,
-        role: data.role ?? 'USER',
-      },
-      select: this.safeUserSelect,
-    });
+    try {
+      return await this.prisma.user.create({
+        data: {
+          email,
+          password: hashedPassword,
+          name: data.name?.trim() || null,
+          role: data.role ?? 'USER',
+        },
+        select: this.safeUserSelect,
+      });
+    } catch (error: unknown) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        error.code === 'P2002'
+      )
+        throw new ConflictException('Unable to use these details');
+      throw error;
+    }
   }
 }

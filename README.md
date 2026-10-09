@@ -9,10 +9,13 @@ The project is organized as a **pnpm monorepo** with two applications (`api` and
 - Google login and JWT authentication. fileciteturn190file0L1-L2 fileciteturn191file0L1-L2
 - User and admin roles.
 - Admin dashboard for managing users.
-- Create interview sessions with position, experience level, difficulty, and summary.
+- Create HR, Technical, Coding or Behavioral practice with position, experience level, difficulty and optional resume.
 - Resume upload and text extraction from PDF/DOCX files.
 - AI interview chat with Gemini.
-- Reports and evaluation screens.
+- Versioned four-dimension evaluation, session completion and history.
+- Report grades A/B/C/D/F and authenticated PDF export with embedded Thai font.
+
+See [FR verification, grading and deployment](docs/FR_VERIFICATION.md) for test evidence, remaining live acceptance checks and migration steps.
 
 ## Tech Stack
 

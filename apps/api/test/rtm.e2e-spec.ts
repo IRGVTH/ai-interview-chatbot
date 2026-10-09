@@ -13,6 +13,7 @@ import { PrismaService } from '../src/database/prisma.service';
 import { PrismaClient } from '../src/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { RUBRIC } from '../src/report/rubric';
+import type { GenerateContentConfig } from '@google/genai';
 
 if (
   process.env.RTM_TEST_DATABASE !== '1' ||
@@ -20,7 +21,7 @@ if (
 )
   throw new Error('Use pnpm test:rtm for an isolated disposable database');
 const ai = {
-  ask: jest.fn((prompt: string) =>
+  ask: jest.fn((prompt: string, config?: GenerateContentConfig) =>
     Promise.resolve({
       text: prompt.includes('Return ONLY JSON:')
         ? JSON.stringify({
@@ -46,7 +47,19 @@ const ai = {
               },
             ],
           })
-        : 'กรุณาอธิบายการทดสอบ Login และโครงการ RTM-MOON-83 ครับ',
+        : JSON.stringify({
+            interviewType: (
+              config?.responseJsonSchema as {
+                properties: { interviewType: { enum: string[] } };
+              }
+            ).properties.interviewType.enum[0],
+            difficulty: (
+              config?.responseJsonSchema as {
+                properties: { difficulty: { enum: string[] } };
+              }
+            ).properties.difficulty.enum[0],
+            question: 'กรุณาอธิบายการทดสอบ Login และโครงการ RTM-MOON-83 ครับ',
+          }),
       model: 'test-model',
       attempts: 1,
     }),
@@ -266,6 +279,9 @@ describe('FR API regression with PGlite PostgreSQL and deterministic AI boundary
       .send({ content: 'คำตอบที่สอง', requestId: randomUUID() })
       .expect(201);
     expect(ai.ask.mock.calls.at(-1)?.[0]).toContain('RTM-ANSWER-47');
+    expect(a.body.assistantMessage.content).toBe(
+      'กรุณาอธิบายการทดสอบ Login และโครงการ RTM-MOON-83 ครับ',
+    );
     expect(await db.chatMessage.count({ where: { sessionId } })).toBe(5);
   });
   it('FR-07/14 rolls back a failed AI turn', async () => {
@@ -277,6 +293,92 @@ describe('FR API regression with PGlite PostgreSQL and deterministic AI boundary
       .send({ content: 'ลองใหม่', requestId: randomUUID() })
       .expect(500);
     expect(await db.chatMessage.count({ where: { sessionId } })).toBe(n);
+  });
+  it('FR-02/06/07 rejects type drift and coaching output without saving a half-turn', async () => {
+    const i = await request(app.getHttpServer())
+      .post('/interviews')
+      .set(auth())
+      .send({ ...setup, interviewType: 'HR', position: 'Cloud Engineer' })
+      .expect(201);
+    const s = await request(app.getHttpServer())
+      .post('/chat/sessions')
+      .set(auth())
+      .send({ interviewId: i.body.id })
+      .expect(201);
+    for (const invalid of [
+      'ยินดีด้วยครับ **Feedback:** ดีมาก **Follow-up Question (Behavioral - Easy):** จัดการเวลาอย่างไร?',
+      JSON.stringify({
+        interviewType: 'Behavioral',
+        difficulty: 'easy',
+        question: 'จัดการเวลาอย่างไร?',
+      }),
+      JSON.stringify({
+        interviewType: 'HR',
+        difficulty: 'easy',
+        question: 'สนใจ Cloud เพราะอะไร?',
+        feedback: 'ตอบดีมาก',
+        betterExampleAnswer: 'ตัวอย่างคำตอบ',
+      }),
+    ]) {
+      ai.ask.mockResolvedValueOnce({
+        text: invalid,
+        model: 'test-model',
+        attempts: 1,
+      });
+      await request(app.getHttpServer())
+        .post(`/chat/sessions/${s.body.id}/messages`)
+        .set(auth())
+        .send({
+          content: 'สนใจ Cloud จากการ deploy โครงการ',
+          requestId: randomUUID(),
+        })
+        .expect(502);
+      expect(
+        await db.chatMessage.count({ where: { sessionId: s.body.id } }),
+      ).toBe(1);
+      expect(
+        (await db.chatSession.findUnique({ where: { id: s.body.id } }))
+          ?.turnVersion,
+      ).toBe(0);
+    }
+    const r = await request(app.getHttpServer())
+      .post(`/chat/sessions/${s.body.id}/messages`)
+      .set(auth())
+      .send({
+        content: 'สนใจ Cloud จากการ deploy โครงการ',
+        requestId: randomUUID(),
+      })
+      .expect(201);
+    expect(r.body.assistantMessage.content).not.toContain('interviewType');
+    expect(ai.ask.mock.calls.at(-1)?.[1]?.systemInstruction).toContain(
+      'Do not change them',
+    );
+    expect(ai.ask.mock.calls.at(-1)?.[1]?.responseMimeType).toBe(
+      'application/json',
+    );
+  });
+  it('FR-02/14 rejects an invalid first question before creating a session', async () => {
+    const i = await request(app.getHttpServer())
+      .post('/interviews')
+      .set(auth())
+      .send(setup)
+      .expect(201);
+    ai.ask.mockResolvedValueOnce({
+      text: 'Feedback: เก่งมาก',
+      model: 'test-model',
+      attempts: 1,
+    });
+    await request(app.getHttpServer())
+      .post('/chat/sessions')
+      .set(auth())
+      .send({ interviewId: i.body.id })
+      .expect(502);
+    expect(
+      await db.chatSession.count({ where: { interviewId: i.body.id } }),
+    ).toBe(0);
+    expect(
+      (await db.interview.findUnique({ where: { id: i.body.id } }))?.status,
+    ).toBe('draft');
   });
   it('FR-01/06/14/17/18 denies another account and anonymous callers', async () => {
     for (const url of [
@@ -330,7 +432,11 @@ describe('FR API regression with PGlite PostgreSQL and deterministic AI boundary
   it('FR-07/14 concurrent sends commit one complete pair and reject stale history', async () => {
     const n = await db.chatMessage.count({ where: { sessionId } });
     const response = {
-      text: 'คำถามถัดไปจากคำตอบจริง',
+      text: JSON.stringify({
+        interviewType: 'Technical',
+        difficulty: 'easy',
+        question: 'คำถามถัดไปจากคำตอบจริง',
+      }),
       model: 'test-model',
       attempts: 1,
     };
@@ -446,7 +552,7 @@ describe('FR API regression with PGlite PostgreSQL and deterministic AI boundary
       .get('/report/overview')
       .set(auth(login.body.accessToken))
       .expect(200);
-    expect(r.body.totalInterviews).toBe(8);
+    expect(r.body.totalInterviews).toBe(10);
     expect(r.body.averageOverall).toBe(8);
     expect(r.body.averageGrade).toBe('A');
     expect(

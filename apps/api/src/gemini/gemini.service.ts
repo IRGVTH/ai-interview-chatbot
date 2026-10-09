@@ -4,7 +4,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, GenerateContentConfig } from '@google/genai';
 
 type GeminiModel = 'gemini-3.1-flash-lite' | 'gemini-3.7-flash';
 type StreamChunk = { text?: string };
@@ -41,7 +41,7 @@ export class GeminiService {
     this.ai = new GoogleGenAI({ apiKey });
   }
 
-  async ask(prompt: string) {
+  async ask(prompt: string, config?: GenerateContentConfig) {
     const maxAttemptsPerModel = 3;
     const deadline = Date.now() + 25_000;
 
@@ -58,6 +58,7 @@ export class GeminiService {
             this.ai.models.generateContent({
               model,
               contents: prompt,
+              config,
             }),
             Math.max(1, deadline - Date.now()),
           );

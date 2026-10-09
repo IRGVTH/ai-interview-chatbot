@@ -14,6 +14,7 @@ import { PrismaClient } from '../src/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { RUBRIC } from '../src/report/rubric';
 import type { GenerateContentConfig } from '@google/genai';
+import { INTERVIEW_CLOSING_MESSAGE } from '../src/chat/interview-progress';
 
 if (
   process.env.RTM_TEST_DATABASE !== '1' ||
@@ -531,6 +532,18 @@ describe('FR API regression with PGlite PostgreSQL and deterministic AI boundary
     const i = await db.interview.findUnique({ where: { id: interviewId } });
     expect(i?.status).toBe('completed');
     expect(i?.finishedAt).toBeTruthy();
+    const closed = await db.chatMessage.findMany({
+      where: { sessionId },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    });
+    expect(closed.at(-1)?.content).toBe(INTERVIEW_CLOSING_MESSAGE);
+    await request(app.getHttpServer())
+      .post(`/report/sessions/${sessionId}/complete`)
+      .set(auth())
+      .expect(201);
+    expect(await db.chatMessage.count({ where: { sessionId } })).toBe(
+      closed.length,
+    );
   });
   it('FR-12 completed sessions reject new messages and retain their evaluation', async () => {
     await request(app.getHttpServer())
@@ -620,5 +633,192 @@ describe('FR API regression with PGlite PostgreSQL and deterministic AI boundary
       })
       .expect(201);
     expect(r.body.text).toContain('RTM-MOON-83');
+  });
+  it('FR-12 automatically closes after ten answers, includes the final answer and safely retries scoring', async () => {
+    const i = await request(app.getHttpServer())
+      .post('/interviews')
+      .set(auth())
+      .send(setup)
+      .expect(201);
+    const s = await request(app.getHttpServer())
+      .post('/chat/sessions')
+      .set(auth())
+      .send({ interviewId: i.body.id })
+      .expect(201);
+    for (let n = 1; n <= 9; n++) {
+      const r = await request(app.getHttpServer())
+        .post(`/chat/sessions/${s.body.id}/messages`)
+        .set(auth())
+        .send({ content: `คำตอบข้อ ${n} SELECT`, requestId: randomUUID() })
+        .expect(201);
+      if (n === 9)
+        expect(r.body.assistantMessage.content).toContain('คำถามสุดท้าย');
+    }
+    expect(
+      (await db.interview.findUnique({ where: { id: i.body.id } }))?.status,
+    ).toBe('in_progress');
+    const final = {
+      content: 'FINAL-ANSWER-10 ใช้ SELECT และตรวจ input',
+      requestId: randomUUID(),
+    };
+    ai.ask.mockResolvedValueOnce({
+      text: '{"technical":null}',
+      model: 'test-model',
+      attempts: 1,
+    });
+    await request(app.getHttpServer())
+      .post(`/chat/sessions/${s.body.id}/messages/stream`)
+      .set(auth())
+      .send(final)
+      .expect(502);
+    expect(
+      await db.chatMessage.count({ where: { sessionId: s.body.id } }),
+    ).toBe(19);
+    expect(
+      await db.chatEvaluation.count({ where: { sessionId: s.body.id } }),
+    ).toBe(0);
+    const defaultAsk = ai.ask.getMockImplementation();
+    if (!defaultAsk) throw new Error('AI fixture missing');
+    ai.ask.mockImplementationOnce(async (prompt, config) => {
+      const result = await defaultAsk(prompt, config);
+      const evaluation = JSON.parse(result.text);
+      const transcript = JSON.parse(prompt.split('Transcript: ')[1]);
+      evaluation.exampleAnswers[0].messageId = transcript.at(-1).id;
+      return { ...result, text: JSON.stringify(evaluation) };
+    });
+    const r = await request(app.getHttpServer())
+      .post(`/chat/sessions/${s.body.id}/messages/stream`)
+      .set(auth())
+      .send(final)
+      .expect(201);
+    expect(r.text).toBe(INTERVIEW_CLOSING_MESSAGE);
+    const lastPrompt = ai.ask.mock.calls.at(-1)?.[0];
+    expect(lastPrompt).toContain('Return ONLY JSON:');
+    expect(lastPrompt).toContain('FINAL-ANSWER-10');
+    const calls = ai.ask.mock.calls.length;
+    const replay = await request(app.getHttpServer())
+      .post(`/chat/sessions/${s.body.id}/messages/stream`)
+      .set(auth())
+      .send(final)
+      .expect(201);
+    expect(replay.text).toBe(r.text);
+    expect(ai.ask.mock.calls.length).toBe(calls);
+    expect(
+      await db.chatMessage.count({ where: { sessionId: s.body.id } }),
+    ).toBe(21);
+    const report = await request(app.getHttpServer())
+      .get(`/report/sessions/${s.body.id}/evaluation`)
+      .set(auth())
+      .expect(200);
+    const detail = await request(app.getHttpServer())
+      .get(`/chat/sessions/${s.body.id}`)
+      .set(auth())
+      .expect(200);
+    expect(detail.body.questionLimit).toBe(10);
+    expect(detail.body.interview.status).toBe('completed');
+    expect(detail.body.interview.finishedAt).toBeTruthy();
+    expect(report.body.grade).toBe('A');
+    expect(report.body.sourceTurnVersion).toBe(detail.body.turnVersion);
+    expect(report.body.exampleAnswers[0].originalAnswer).toBe(final.content);
+    await request(app.getHttpServer())
+      .post(`/chat/sessions/${s.body.id}/messages`)
+      .set(auth())
+      .send({ content: 'ข้อที่ 11', requestId: randomUUID() })
+      .expect(400);
+    await request(app.getHttpServer())
+      .get(`/report/sessions/${s.body.id}/pdf`)
+      .set(auth())
+      .expect(200);
+  });
+  it('FR-12 completes an existing over-limit room without asking another question', async () => {
+    const owner = await db.user.findUniqueOrThrow({ where: { email } });
+    const i = await db.interview.create({
+      data: { ...setup, userId: owner.id, status: 'in_progress' },
+    });
+    const s = await db.chatSession.create({
+      data: {
+        userId: owner.id,
+        interviewId: i.id,
+        turnVersion: 12,
+        messages: {
+          create: Array.from({ length: 12 }, (_, n) => ({
+            role: 'user',
+            content: `คำตอบเดิม ${n + 1} SELECT`,
+          })),
+        },
+      },
+    });
+    const detail = await request(app.getHttpServer())
+      .get(`/chat/sessions/${s.id}`)
+      .set(auth())
+      .expect(200);
+    expect(detail.body.questionLimit).toBe(10);
+    const r = await request(app.getHttpServer())
+      .post(`/report/sessions/${s.id}/complete`)
+      .set(auth())
+      .expect(201);
+    expect(r.body.grade).toBe('A');
+    expect(
+      (await db.interview.findUnique({ where: { id: i.id } }))?.status,
+    ).toBe('completed');
+    expect(
+      await db.chatMessage.count({
+        where: { sessionId: s.id, content: INTERVIEW_CLOSING_MESSAGE },
+      }),
+    ).toBe(1);
+  });
+  it('FR-12 concurrent final answers save only one closure and evaluation', async () => {
+    const owner = await db.user.findUniqueOrThrow({ where: { email } });
+    const i = await db.interview.create({
+      data: { ...setup, userId: owner.id, status: 'in_progress' },
+    });
+    const s = await db.chatSession.create({
+      data: {
+        userId: owner.id,
+        interviewId: i.id,
+        turnVersion: 9,
+        messages: {
+          create: Array.from({ length: 9 }, (_, n) => ({
+            role: 'user',
+            content: `คำตอบ ${n + 1} SELECT`,
+          })),
+        },
+      },
+    });
+    const defaultAsk = ai.ask.getMockImplementation();
+    if (!defaultAsk) throw new Error('AI fixture missing');
+    const releases: (() => void)[] = [];
+    const gated = async (prompt: string, config?: GenerateContentConfig) => {
+      const result = await defaultAsk(prompt, config);
+      await new Promise<void>((resolve) => {
+        releases.push(resolve);
+        if (releases.length === 2) releases.forEach((release) => release());
+      });
+      return result;
+    };
+    ai.ask.mockImplementationOnce(gated).mockImplementationOnce(gated);
+    const results = await Promise.all(
+      ['FINAL-A', 'FINAL-B'].map((content) =>
+        request(app.getHttpServer())
+          .post(`/chat/sessions/${s.id}/messages`)
+          .set(auth())
+          .send({ content, requestId: randomUUID() }),
+      ),
+    );
+    expect(results.map((r) => r.status).sort()).toEqual([201, 409]);
+    expect(
+      await db.chatMessage.count({ where: { sessionId: s.id, role: 'user' } }),
+    ).toBe(10);
+    expect(
+      await db.chatMessage.count({
+        where: { sessionId: s.id, content: INTERVIEW_CLOSING_MESSAGE },
+      }),
+    ).toBe(1);
+    expect(await db.chatEvaluation.count({ where: { sessionId: s.id } })).toBe(
+      1,
+    );
+    expect(
+      (await db.interview.findUnique({ where: { id: i.id } }))?.status,
+    ).toBe('completed');
   });
 });

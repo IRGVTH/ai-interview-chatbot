@@ -15,6 +15,7 @@ type ChatMessage = {
 };
 
 type ChatSession = {
+  questionLimit?: number;
   id: string;
   title: string | null;
   model: string;
@@ -158,6 +159,11 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
   }, []);
 
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
+  const answeredQuestions =
+    activeSession?.messages.filter((m) => m.role === "user").length ?? 0;
+  const reachedLimit =
+    !!activeSession?.questionLimit &&
+    answeredQuestions >= activeSession.questionLimit;
 
   useEffect(() => {
     return () => {
@@ -205,6 +211,24 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
 
         if (cancelled) return;
         setActiveSession(selected);
+        if (
+          selected.questionLimit &&
+          selected.interview.status !== "completed" &&
+          selected.messages.filter((m) => m.role === "user").length >=
+            selected.questionLimit
+        ) {
+          await apiFetch(`/report/sessions/${selected.id}/complete`, {
+            method: "POST",
+            token,
+          });
+          if (!cancelled) {
+            const finished = await apiFetch<ChatSession>(
+              `/chat/sessions/${selected.id}`,
+              { token },
+            );
+            if (!cancelled) setActiveSession(finished);
+          }
+        }
       } catch (err: unknown) {
         if (cancelled) return;
         const messageText = getErrorMessage(err, "Failed to load chat");
@@ -273,6 +297,7 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
       typeof window === "undefined" ||
       sendingRef.current ||
       completing ||
+      reachedLimit ||
       activeSession?.interview.status === "completed"
     )
       return;
@@ -349,6 +374,27 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
       setSessionId(nextSessionId);
       router.replace(`/chat?sessionId=${nextSessionId}`);
       setActiveSession(selected);
+      if (
+        selected.questionLimit &&
+        selected.interview.status !== "completed" &&
+        selected.messages.filter((m) => m.role === "user").length >=
+          selected.questionLimit
+      ) {
+        setCompleting(true);
+        try {
+          await apiFetch(`/report/sessions/${selected.id}/complete`, {
+            method: "POST",
+            token,
+          });
+          const finished = await apiFetch<ChatSession>(
+            `/chat/sessions/${selected.id}`,
+            { token },
+          );
+          setActiveSession(finished);
+        } finally {
+          setCompleting(false);
+        }
+      }
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Failed to load chat session"));
     }
@@ -362,6 +408,7 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
       activeSession?.id !== sessionId ||
       sendingRef.current ||
       completing ||
+      reachedLimit ||
       activeSession?.interview.status === "completed"
     )
       return;
@@ -476,6 +523,7 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
           item.id === refreshed.id
             ? {
                 ...item,
+                interview: refreshed.interview,
                 lastMessageAt: refreshed.lastMessageAt,
                 messages: refreshed.messages,
               }
@@ -530,6 +578,7 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
             item.id === refreshed.id
               ? {
                   ...item,
+                  interview: refreshed.interview,
                   lastMessageAt: refreshed.lastMessageAt,
                   messages: refreshed.messages,
                 }
@@ -727,6 +776,28 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
           </div>
         ) : null}
 
+        {activeSession?.questionLimit ? (
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-900">
+            {activeSession.interview.status === "completed" ? (
+              <>
+                <p>การสัมภาษณ์สิ้นสุดแล้ว บันทึกผลประเมินเรียบร้อย</p>
+                <Link
+                  href={`/report?sessionId=${activeSession.id}`}
+                  className="mt-2 inline-block font-semibold underline"
+                >
+                  ดูคะแนน เกรด และคำแนะนำใน Report
+                </Link>
+              </>
+            ) : (
+              <p>
+                ตอบแล้ว {answeredQuestions}/{activeSession.questionLimit} คำถาม
+                — ระบบจะจบและสรุปผลอัตโนมัติเมื่อครบ{" "}
+                {activeSession.questionLimit} คำถาม
+              </p>
+            )}
+          </div>
+        ) : null}
+
         <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
           <aside className="rounded-3xl bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between gap-3">
@@ -870,6 +941,7 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
                     !sessionId ||
                     isStreaming ||
                     completing ||
+                    reachedLimit ||
                     activeSession?.interview.status === "completed"
                   }
                   aria-describedby="composer-hint"
@@ -901,6 +973,7 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
                       !sessionId ||
                       isStreaming ||
                       completing ||
+                      reachedLimit ||
                       activeSession?.interview.status === "completed" ||
                       !message.trim()
                     }
@@ -910,6 +983,12 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
                   </button>
                   <button
                     type="button"
+                    disabled={
+                      isStreaming ||
+                      completing ||
+                      reachedLimit ||
+                      activeSession?.interview.status === "completed"
+                    }
                     onClick={() => {
                       if (isListening) {
                         stopListening();

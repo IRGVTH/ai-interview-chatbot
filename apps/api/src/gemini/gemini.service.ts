@@ -4,7 +4,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, GenerateContentConfig } from '@google/genai';
 
 type GeminiModel = 'gemini-3.1-flash-lite' | 'gemini-3.7-flash';
 type StreamChunk = { text?: string };
@@ -41,9 +41,9 @@ export class GeminiService {
     this.ai = new GoogleGenAI({ apiKey });
   }
 
-  async ask(prompt: string) {
+  async ask(prompt: string, config?: GenerateContentConfig) {
     const maxAttemptsPerModel = 3;
-    const requestTimeoutMs = 25_000;
+    const deadline = Date.now() + 25_000;
 
     let lastError: unknown;
 
@@ -52,12 +52,15 @@ export class GeminiService {
         try {
           this.logger.log(`Gemini ask start model=${model} attempt=${attempt}`);
 
+          if (Date.now() >= deadline)
+            throw new Error('AI request deadline exceeded');
           const response = await this.withTimeout(
             this.ai.models.generateContent({
               model,
               contents: prompt,
+              config,
             }),
-            requestTimeoutMs,
+            Math.max(1, deadline - Date.now()),
           );
 
           this.logger.log(
@@ -80,7 +83,11 @@ export class GeminiService {
             )} retryable=${isRetryable}`,
           );
 
-          if (!isRetryable || attempt === maxAttemptsPerModel) {
+          if (
+            !isRetryable ||
+            attempt === maxAttemptsPerModel ||
+            Date.now() >= deadline
+          ) {
             break;
           }
 
@@ -88,7 +95,9 @@ export class GeminiService {
           this.logger.warn(
             `Gemini ask retry model=${model} nextAttempt=${attempt + 1} delay=${delayMs}ms`,
           );
-          await this.sleep(delayMs);
+          await this.sleep(
+            Math.min(delayMs, Math.max(0, deadline - Date.now())),
+          );
         }
       }
     }

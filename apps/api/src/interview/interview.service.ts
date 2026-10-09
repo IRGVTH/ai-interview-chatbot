@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateInterviewDto } from './dto/create-interview.dto';
 import { UpdateInterviewDto } from './dto/update-interview.dto';
@@ -39,6 +44,7 @@ export class InterviewService {
 
     const interview = (await this.prisma.interview.create({
       data: {
+        interviewType: dto.interviewType,
         title: this.cleanText(dto.title) ?? dto.title,
         position: this.cleanText(dto.position) ?? dto.position,
         experienceLevel: dto.experienceLevel,
@@ -46,6 +52,7 @@ export class InterviewService {
         summary: this.cleanText(dto.summary) ?? null,
         resumeFileName: this.cleanText(dto.resumeFileName) ?? null,
         resumeText: this.cleanText(dto.resumeText) ?? null,
+        resumeUploadedAt: dto.resumeText?.trim() ? new Date() : null,
         userId,
       },
     })) as InterviewRecord;
@@ -88,11 +95,22 @@ export class InterviewService {
   ): Promise<InterviewRecord> {
     this.logger.log(`Update interview user=${userId} interview=${id}`);
 
-    await this.findOne(userId, id);
+    const current = await this.findOne(userId, id);
+    const started = await this.prisma.chatSession.count({
+      where: { interviewId: id },
+    });
+    if (current.status !== 'draft' || started)
+      throw new BadRequestException(
+        'Cannot change interview context after practice starts',
+      );
 
-    const interview = (await this.prisma.interview.update({
-      where: { id },
+    const changed = await this.prisma.interview.updateMany({
+      where: { id, userId, status: 'draft', chatSessions: { none: {} } },
       data: {
+        ...(dto.interviewType !== undefined && {
+          interviewType: dto.interviewType,
+        }),
+        revision: { increment: 1 },
         ...(dto.title !== undefined && {
           title: this.cleanText(dto.title) ?? dto.title,
         }),
@@ -113,9 +131,13 @@ export class InterviewService {
         }),
         ...(dto.resumeText !== undefined && {
           resumeText: this.cleanText(dto.resumeText) ?? null,
+          resumeUploadedAt: dto.resumeText?.trim() ? new Date() : null,
         }),
       },
-    })) as InterviewRecord;
+    });
+    if (!changed.count)
+      throw new BadRequestException('Interview has already started');
+    const interview = await this.findOne(userId, id);
 
     this.logger.log(`Update interview success user=${userId} interview=${id}`);
 

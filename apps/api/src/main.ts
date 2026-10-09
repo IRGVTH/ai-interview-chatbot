@@ -10,7 +10,8 @@ async function bootstrap() {
   const frontendOrigins = process.env.FRONTEND_URL?.split(',')
     .map((item) => item.trim())
     .filter(Boolean) ?? [
-    'https://ai-interview-chatbot-web-gamma.vercel.app,http://localhost:3000',
+    'https://ai-interview-chatbot-web-gamma.vercel.app',
+    'http://localhost:3000',
   ];
 
   app.enableCors({

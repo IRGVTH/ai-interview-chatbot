@@ -28,24 +28,31 @@ export class ResumeService {
 
     let text = '';
 
-    if (isPdf) {
-      const { PDFParse } = await import('pdf-parse');
-      const parser = new PDFParse({ data: file.buffer });
+    try {
+      if (isPdf) {
+        const { PDFParse } = await import('pdf-parse');
+        const parser = new PDFParse({ data: file.buffer });
 
-      try {
-        const result = await parser.getText();
-        text = result.text || '';
-      } finally {
-        await parser.destroy();
+        try {
+          const result = await parser.getText();
+          text = result.text || '';
+        } finally {
+          await parser.destroy();
+        }
       }
-    }
 
-    if (isDocx) {
-      const result = await mammoth.extractRawText({ buffer: file.buffer });
-      text = result.value || '';
+      if (isDocx) {
+        const result = await mammoth.extractRawText({ buffer: file.buffer });
+        text = result.value || '';
+      }
+    } catch {
+      throw new BadRequestException(
+        'อ่าน Resume ไม่ได้ กรุณาใช้ PDF ที่มีข้อความหรือ DOCX หรือฝึกโดยไม่ใช้ Resume',
+      );
     }
-
     text = this.cleanText(text);
+    if (text.length > 50000)
+      throw new BadRequestException('Resume text exceeds 50,000 characters');
 
     if (!text) {
       throw new BadRequestException('Could not extract text from resume');

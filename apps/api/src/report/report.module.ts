@@ -7,5 +7,6 @@ import { ReportService } from './report.service';
   imports: [GeminiModule],
   controllers: [ReportController],
   providers: [ReportService],
+  exports: [ReportService],
 })
 export class ReportModule {}

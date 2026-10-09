@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
-    "lint": "turbo lint"
+    "lint": "turbo lint",
+    "deploy:api:build": "pnpm --filter @ai-interview/database db:generate && pnpm --filter api build",
+    "deploy:api:start": "pnpm --filter @ai-interview/database exec prisma migrate deploy && pnpm --filter api start:prod"
   },
   "devDependencies": {
     "turbo": "^2.10.12"

@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { RubricGuide } from "@/components/report/rubric-guide";
 import { apiFetch } from "@/lib/api";
 
 type Interview = {
@@ -10,6 +11,7 @@ type Interview = {
   position: string;
   experienceLevel: string;
   difficulty: string;
+  interviewType: string;
   status: string;
   summary: string | null;
   resumeText?: string | null;
@@ -22,6 +24,7 @@ type CreateInterviewForm = {
   position: string;
   experienceLevel: string;
   difficulty: string;
+  interviewType: string;
   summary: string;
   resumeFileName: string;
   resumeText: string;
@@ -87,7 +90,8 @@ export function InterviewPage() {
 
   const [form, setForm] = useState<CreateInterviewForm>({
     title: "",
-    position: "Frontend Developer",
+    position: "",
+    interviewType: "",
     experienceLevel: "0-1",
     difficulty: "easy",
     summary: "",
@@ -136,7 +140,11 @@ export function InterviewPage() {
 
   async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!token) return;
+    if (!token || creating) return;
+    if (!form.position || !form.interviewType) {
+      setError("กรุณาเลือกประเภทและตำแหน่งงานก่อนเริ่ม");
+      return;
+    }
 
     setCreating(true);
     setSuccess("");
@@ -153,7 +161,8 @@ export function InterviewPage() {
       setSelectedInterviewId(created.id);
       setForm({
         title: "",
-        position: "Frontend Developer",
+        position: "",
+        interviewType: "",
         experienceLevel: "0-1",
         difficulty: "easy",
         summary: "",
@@ -174,6 +183,8 @@ export function InterviewPage() {
   async function handleResumeUpload(file: File) {
     if (!token) return;
 
+    setResumeName("");
+    setForm((prev) => ({ ...prev, resumeFileName: "", resumeText: "" }));
     setResumeUploading(true);
     setError("");
 
@@ -189,6 +200,7 @@ export function InterviewPage() {
             Authorization: `Bearer ${token}`,
           },
           body: formData,
+          signal: AbortSignal.timeout(30000),
         },
       );
 
@@ -227,7 +239,8 @@ export function InterviewPage() {
         token,
         body: {
           interviewId: selectedInterviewId,
-          title: "Practice Chat",
+          title: interviews.find((item) => item.id === selectedInterviewId)
+            ?.title,
         },
       });
 
@@ -318,13 +331,27 @@ export function InterviewPage() {
               />
 
               <SelectField
+                label="Interview type / ประเภทสัมภาษณ์"
+                value={form.interviewType}
+                onChange={(value) => setForm({ ...form, interviewType: value })}
+                options={[
+                  { label: "เลือกประเภทสัมภาษณ์", value: "" },
+                  ...["HR", "Technical", "Coding", "Behavioral"].map(
+                    (value) => ({ label: value, value }),
+                  ),
+                ]}
+              />
+              <SelectField
                 label="Position"
                 value={form.position}
                 onChange={(value) => setForm({ ...form, position: value })}
-                options={POSITION_OPTIONS.map((item) => ({
-                  label: item,
-                  value: item,
-                }))}
+                options={[
+                  { label: "เลือกตำแหน่งงาน", value: "" },
+                  ...POSITION_OPTIONS.map((item) => ({
+                    label: item,
+                    value: item,
+                  })),
+                ]}
               />
 
               <div className="grid gap-4 md:grid-cols-2">
@@ -402,10 +429,25 @@ export function InterviewPage() {
                 {resumeName ? (
                   <p className="mt-2 text-sm text-black md:text-gray-400">
                     Uploaded: <span className="font-medium">{resumeName}</span>
+                    <button
+                      type="button"
+                      className="ml-3 underline"
+                      onClick={() => {
+                        setResumeName("");
+                        setForm((prev) => ({
+                          ...prev,
+                          resumeText: "",
+                          resumeFileName: "",
+                        }));
+                      }}
+                    >
+                      นำ Resume ออก
+                    </button>
                   </p>
                 ) : null}
               </div>
 
+              <RubricGuide token={token} />
               <button
                 type="submit"
                 disabled={creating || resumeUploading}
@@ -472,8 +514,12 @@ export function InterviewPage() {
                             {interview.title}
                           </h3>
                           <p className="mt-1 text-sm text-black md:text-gray-500">
-                            {interview.position} • {interview.experienceLevel} •{" "}
-                            {interview.difficulty}
+                            {interview.interviewType} • {interview.position} •{" "}
+                            {interview.experienceLevel} • {interview.difficulty}
+                            <br />
+                            {new Date(interview.createdAt).toLocaleString(
+                              "th-TH",
+                            )}
                           </p>
                           {interview.summary ? (
                             <p className="mt-2 text-sm text-black md:text-gray-600">
@@ -559,6 +605,7 @@ function SelectField({
       </label>
       <select
         id={id}
+        required
         className="w-full rounded-xl border px-3 py-2 text-black outline-none focus:ring-2 focus:ring-black/10"
         value={value}
         onChange={(e) => onChange(e.target.value)}

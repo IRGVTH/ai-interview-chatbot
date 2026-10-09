@@ -2,9 +2,17 @@
 
 The error `property interviewType should not exist` occurs when an older API's strict validation rejects the new interview request. The current `CreateInterviewDto` accepts HR, Technical, Coding and Behavioral; the integration suite verifies that each type is stored and passed to the AI context. Keep this field and strict validation: removing it would lose FR-02.
 
-On 2026-10-09, the public API at `https://ai-interview-chatbot-grvy.onrender.com/report/rubric` still returned 404. The API source on `fix/srs-functional-requirements` defines that guarded route (anonymous requests should receive 401). Together with the user's creation error, this indicates an API/web release mismatch; the active Render branch and commit still need to be checked in the dashboard.
+On 2026-10-09, the public API at `https://ai-interview-chatbot-grvy.onrender.com/report/rubric` still returned 404. The API source on `fix/srs-functional-requirements` defines that guarded route (anonymous requests should receive 401). Together with the user's creation error, this indicates an API/web release mismatch. Subsequent Settings screenshots confirm Render is configured for `develop`; the deployed commit still needs verification after changing the branch.
 
-## Existing Render service (native Node runtime)
+## Confirmed existing Render service (Docker)
+
+The user's Settings screenshots on 2026-10-09 show branch `develop`, empty Root Directory, Dockerfile Path `./Dockerfile`, Docker Build Context Directory `.`, empty Docker Command, locked/empty Pre-Deploy Command, and Auto-Deploy `On Commit`. This confirms Docker runtime and an API branch mismatch. The latest API/FR changes are on `fix/srs-functional-requirements`.
+
+After the Docker fix is pushed, change **Branch** to `fix/srs-functional-requirements` and save. Keep Root Directory empty, Dockerfile Path `./Dockerfile`, Docker Build Context Directory `.`, and Docker Command empty. Render then uses the checked-in Dockerfile's CMD. If saving does not start a deployment, use **Manual Deploy → Deploy latest commit**.
+
+The updated Dockerfile uses Node 24 with OpenSSL, installs dev dependencies needed by Nest and Prisma CLI, generates Prisma with a dummy build-only database URL, and builds the API/fonts. Its CMD runs `pnpm deploy:api:start`, which migrates the runtime database and starts Nest only after migration succeeds. The locked Pre-Deploy Command does not need editing. `.dockerignore` excludes nested node_modules and environment files from the image. The Docker image itself has not been built in this workspace because Docker/Podman is unavailable; confirm the image build and migration in Render logs.
+
+## Alternative native Node runtime settings
 
 Use the existing service that owns the URL above, rather than creating a second API. Record its current settings and commit before changing them.
 
@@ -25,7 +33,7 @@ Local verification on 2026-10-09: `deploy:api:build` passed (using a dummy datab
 
 Review and back up the intended production database before the first migration. The migration adds interview type, concurrency fields and rubric metadata; legacy evaluations retain their original scores. The commands above are prepared configuration; committing them alone does not update the existing Render service or apply migrations.
 
-If the existing service uses Docker, native Build/Start Commands do not apply. Inspect its runtime first and update the Docker build/start flow to generate Prisma and migrate before startup, using the same package scripts.
+Native Build/Start Commands above do not apply to the confirmed Docker service; use the Docker section for that service.
 
 ## Verify after release
 

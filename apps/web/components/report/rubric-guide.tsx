@@ -34,7 +34,7 @@ export function RubricGuide({
   return (
     <details className="rounded-xl border bg-white p-4 text-sm text-black">
       <summary className="cursor-pointer font-semibold">
-        Rubric การวัดคะแนนเต็ม 30 และเกณฑ์เกรด A–F
+        Rubric แต่ละด้านเต็ม 30 คะแนน และเกณฑ์เกรด A–F
       </summary>
       {!rubric ? (
         <p role="status" className="mt-3">
@@ -51,7 +51,7 @@ export function RubricGuide({
                 <tr>
                   <th className="p-3">ด้าน / น้ำหนัก</th>
                   <th className="p-3">สิ่งที่วัด</th>
-                  <th className="p-3">เกณฑ์ระดับคะแนนดิบ / 10</th>
+                  <th className="p-3">เกณฑ์ระดับคะแนน / {rubric.max}</th>
                 </tr>
               </thead>
               <tbody>
@@ -60,7 +60,8 @@ export function RubricGuide({
                     <td className="p-3 font-medium">
                       {d.label}
                       <br />
-                      {d.weight * 100}% (สูงสุด 7.5 / 30)
+                      เต็ม {rubric.max} คะแนน / น้ำหนัก {d.weight * 100}%
+                      ของค่าเฉลี่ย
                     </td>
                     <td className="p-3">{d.criteria}</td>
                     <td className="p-3">

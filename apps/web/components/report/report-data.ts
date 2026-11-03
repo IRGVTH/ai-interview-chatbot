@@ -1,4 +1,4 @@
-export const RUBRIC_VERSION = "interview-30-v1";
+export const RUBRIC_VERSION = "interview-dimensions-30-v2";
 export const GRADE_SCALE = {
   version: "practice-grade-30-v1",
   description:
@@ -40,6 +40,7 @@ export type Evaluation = {
   totalScore: number | null;
   displayScore: number | null;
   scoreMax: number;
+  dimensionScoreMax: number;
   grade: string | null;
   strengths: string[];
   improvements: string[];
@@ -95,8 +96,10 @@ const string = (v: unknown, fallback = "") =>
   typeof v === "string" ? v : fallback;
 const strings = (v: unknown): string[] =>
   Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
-const score = (v: unknown) =>
-  typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 10 ? v : null;
+const score = (v: unknown, maximum = 10) =>
+  typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= maximum
+    ? v
+    : null;
 const version = (v: unknown) =>
   typeof v === "number" && Number.isInteger(v) && v >= 0 ? v : null;
 const date = (v: unknown) =>
@@ -120,7 +123,7 @@ export function normalizeRubric(value: unknown): Rubric | null {
     typeof r.anchors !== "string" ||
     typeof r.limitation !== "string" ||
     r.min !== 0 ||
-    r.max !== 10 ||
+    r.max !== (r.version === RUBRIC_VERSION ? 30 : 10) ||
     !Array.isArray(r.dimensions) ||
     r.dimensions.length !== 4
   )
@@ -142,7 +145,7 @@ export function normalizeRubric(value: unknown): Rubric | null {
   return {
     version: r.version,
     min: 0,
-    max: 10,
+    max: r.version === RUBRIC_VERSION ? 30 : 10,
     totalMax: r.totalMax === 30 ? 30 : undefined,
     formula: string(r.formula),
     anchors: r.anchors,
@@ -162,7 +165,8 @@ export const LEGACY_DISPLAY: Rubric = {
   min: 0,
   max: 10,
   gradeScale: GRADE_SCALE,
-  anchors: "ผลเดิมยังไม่มีเหตุผลครบ 4 ด้าน กรุณาประเมินใหม่ด้วยเกณฑ์เต็ม 30",
+  anchors:
+    "ผลเดิมใช้คะแนนแต่ละด้านเต็ม 10 กรุณาประเมินใหม่เพื่อให้ทุกด้านเต็ม 30",
   limitation:
     "AI ประเมินจากข้อความเพื่อการฝึก ไม่ใช่ผลคัดเลือกเข้าทำงานหรือการวัดน้ำเสียง",
   dimensions: [
@@ -176,11 +180,12 @@ function normalizeEvaluation(v: unknown, sessionId: string): Evaluation | null {
   if (v == null) return null;
   const e = object(v);
   if (!e) throw new Error("รูปแบบผลประเมินไม่ถูกต้อง กรุณาลองใหม่");
-  const technical = score(e.technical),
-    communication = score(e.communication),
-    language = score(e.language),
-    confidence = score(e.confidence);
   const rubricVersion = string(e.rubricVersion, "legacy-v0");
+  const dimensionScoreMax = rubricVersion === RUBRIC_VERSION ? 30 : 10;
+  const technical = score(e.technical, dimensionScoreMax),
+    communication = score(e.communication, dimensionScoreMax),
+    language = score(e.language, dimensionScoreMax),
+    confidence = score(e.confidence, dimensionScoreMax);
   const reasons = object(e.dimensionFeedback);
   const isNew =
     rubricVersion === RUBRIC_VERSION &&
@@ -192,13 +197,12 @@ function normalizeEvaluation(v: unknown, sessionId: string): Evaluation | null {
     );
   const totalScore = isNew
     ? Number(
-        (
-          (technical! + communication! + language! + confidence!) *
-          0.75
-        ).toFixed(2),
+        ((technical! + communication! + language! + confidence!) / 4).toFixed(
+          2,
+        ),
       )
     : null;
-  const overall = score(e.overall);
+  const overall = score(e.overall, dimensionScoreMax);
   return {
     id: string(e.id),
     sessionId,
@@ -208,12 +212,17 @@ function normalizeEvaluation(v: unknown, sessionId: string): Evaluation | null {
     confidence,
     overall,
     totalScore,
-    scoreMax: totalScore === null ? 10 : 30,
-    displayScore: totalScore ?? overall,
+    scoreMax: dimensionScoreMax,
+    dimensionScoreMax,
+    displayScore: isNew
+      ? totalScore
+      : rubricVersion === RUBRIC_VERSION
+        ? null
+        : overall,
     grade:
-      totalScore === null
-        ? gradeFromScore(overall)
-        : gradeFromTotalScore(totalScore),
+      rubricVersion === RUBRIC_VERSION
+        ? gradeFromTotalScore(totalScore)
+        : gradeFromScore(overall),
     strengths: strings(e.strengths),
     improvements: strings(e.improvements),
     feedback: string(e.feedback),
@@ -234,7 +243,7 @@ function normalizeEvaluation(v: unknown, sessionId: string): Evaluation | null {
 export function isEvaluationCurrent(s: Session) {
   const e = s.evaluation;
   if (!e) return false;
-  if (e.totalScore !== null)
+  if (e.totalScore !== null || e.rubricVersion === "interview-30-v1")
     return (
       !!e.evaluatedThrough &&
       (!s.lastMessageAt ||
@@ -252,9 +261,33 @@ export function canDownloadEvaluation(s: Session) {
   if (!e || e.displayScore === null) return false;
   if (e.rubricVersion === RUBRIC_VERSION)
     return e.totalScore !== null && isEvaluationCurrent(s);
+  if (e.rubricVersion === "interview-30-v1") return isEvaluationCurrent(s);
   return e.sourceTurnVersion === null && s.turnVersion === null
     ? true
     : isEvaluationCurrent(s);
+}
+export function applyNewEvaluation(
+  overview: Overview,
+  sessionId: string,
+  response: unknown,
+): Overview {
+  const evaluation = normalizeEvaluation(response, sessionId);
+  if (
+    !overview.sessions.some((s) => s.id === sessionId) ||
+    !evaluation ||
+    evaluation.totalScore === null ||
+    !evaluation.evaluatedThrough
+  ) {
+    throw new Error(
+      "API ยังไม่ได้ส่งผลประเมินเกณฑ์เต็ม 30 ที่สมบูรณ์ กรุณาลองใหม่หรือตรวจเวอร์ชัน Backend",
+    );
+  }
+  return normalizeOverview({
+    ...overview,
+    sessions: overview.sessions.map((s) =>
+      s.id === sessionId ? { ...s, evaluation } : s,
+    ),
+  });
 }
 export function normalizeOverview(v: unknown): Overview {
   const r = object(v);

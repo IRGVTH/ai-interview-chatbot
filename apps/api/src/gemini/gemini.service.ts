@@ -44,7 +44,7 @@ export class GeminiService {
     this.models = [
       ...new Set([
         primary || 'gemini-3.1-flash-lite',
-        ...(fallbacks ?? ['gemini-3.8-flash']),
+        ...(fallbacks ?? ['gemini-3.5-flash-lite', 'gemini-3.8-flash']),
       ]),
     ];
   }
@@ -96,7 +96,14 @@ export class GeminiService {
             )} retryable=${isRetryable}`,
           );
 
-          if (!isRetryable || attempt === maxAttemptsPerModel) {
+          // Try another configured model promptly when this one is overloaded.
+          // The last model still gets the normal bounded retries and backoff.
+          const hasFallback = model !== this.models[this.models.length - 1];
+          if (
+            (status === 503 && hasFallback) ||
+            !isRetryable ||
+            attempt === maxAttemptsPerModel
+          ) {
             break;
           }
 
@@ -160,7 +167,12 @@ export class GeminiService {
             )} retryable=${isRetryable}`,
           );
 
-          if (!isRetryable || attempt === maxAttemptsPerModel) {
+          const hasFallback = model !== this.models[this.models.length - 1];
+          if (
+            (status === 503 && hasFallback) ||
+            !isRetryable ||
+            attempt === maxAttemptsPerModel
+          ) {
             break;
           }
 
@@ -222,7 +234,7 @@ export class GeminiService {
     }
     return new ServiceUnavailableException({
       code: 'GEMINI_UNAVAILABLE',
-      message: 'Gemini is temporarily unavailable. Please try again shortly.',
+      message: 'บริการ AI ไม่พร้อมใช้งานชั่วคราว กรุณาลองใหม่อีกครั้ง',
     });
   }
 

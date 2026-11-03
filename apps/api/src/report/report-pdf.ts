@@ -1,7 +1,7 @@
 import {
   RUBRIC,
   RUBRIC_VERSION,
-  total30,
+  average30,
   grade30,
   DimensionKey,
 } from './rubric';
@@ -84,21 +84,21 @@ export async function renderReportPdf(session: PdfReport): Promise<Buffer> {
         language: e.language,
         confidence: e.confidence,
       };
-      const total = total30(scores);
+      const average = average30(scores);
       const rubric =
         e.rubricSnapshot && typeof e.rubricSnapshot === 'object'
           ? (e.rubricSnapshot as typeof RUBRIC)
           : RUBRIC;
-      text(`คะแนนรวม ${total} / 30 · เกรด ${grade30(total)}`, 17);
+      text(
+        `คะแนนเฉลี่ยทั้ง 4 ด้าน ${average} / 30 · เกรด ${grade30(average)}`,
+        17,
+      );
       text(`เกณฑ์ ${e.rubricVersion}`);
       text(rubric.formula || RUBRIC.formula);
       text(rubric.gradeScale?.description || RUBRIC.gradeScale.description);
       for (const d of rubric.dimensions || RUBRIC.dimensions) {
         const raw = scores[d.key as DimensionKey];
-        text(
-          `${d.label}: ${raw} / 10 (คิดเป็น ${Number((raw * 0.75).toFixed(2))} / 7.5)`,
-          15,
-        );
+        text(`${d.label}: ${raw} / 30 · เกรด ${grade30(raw)}`, 15);
         text(
           `เหตุผลที่ได้คะแนน: ${e.dimensionFeedback?.[d.key] || 'ไม่มีเหตุผลที่บันทึกไว้ กรุณาประเมินใหม่'}`,
         );
@@ -112,7 +112,7 @@ export async function renderReportPdf(session: PdfReport): Promise<Buffer> {
         `ความถูกต้องและเนื้อหา: ${e.technical}\nความชัดเจน: ${e.communication}\nการสื่อสารที่สะท้อนความมั่นใจ: ${e.confidence}\nคะแนนรวมเดิม: ${e.overall} / 10`,
       );
       text(
-        'ต้องประเมินใหม่เพื่อให้ได้คะแนนเต็ม 30 พร้อมคะแนนภาษาและเหตุผลครบ 4 ด้าน',
+        'กรุณาประเมินใหม่เพื่อให้ทั้ง 4 ด้านเต็มด้านละ 30 คะแนน และคำนวณคะแนนเฉลี่ยเต็ม 30 พร้อมเกรดและเหตุผลรายด้าน',
       );
     }
     text('ข้อเสนอแนะ', 16);

@@ -2,7 +2,7 @@ import {
   RUBRIC,
   RUBRIC_VERSION,
   parseRubricEvaluation,
-  total30,
+  average30,
   grade30,
 } from './rubric';
 import { interviewTypeContext } from '../interview/interview-type';
@@ -217,7 +217,7 @@ ${transcript || 'No conversation yet.'}
 
 Scoring rubric (follow the level descriptions for every dimension):
 ${JSON.stringify(RUBRIC)}
-Return ONLY JSON with numeric technical, communication, language, confidence (0..10),
+Return ONLY JSON with numeric technical, communication, language, confidence (0..30 for EACH dimension; each dimension has a maximum of 30),
 dimensionFeedback: {technical: string, communication: string, language: string, confidence: string},
 strengths: string[], improvements: string[], feedback: string.
 Every dimensionFeedback must explain in Thai WHY the score fits the rubric, mention specific evidence from the USER answers, and suggest what would improve it.
@@ -227,7 +227,8 @@ Judge content according to the selected interview type and experience. Do not pe
 Evaluate language quality in the language actually used; Thai is acceptable.
 If evidence is very limited, explicitly say so in each relevant reason rather than assuming skill.
 All explanations, strengths, improvements and feedback must be in Thai.
-Do not provide overall/grade/total: the server computes the weighted result.
+Award each dimension directly on its 0..30 rubric, not on a 0..10 scale.
+Do not provide overall/grade/total: the server computes the arithmetic mean of the four dimension scores (maximum 30).
 `.trim();
 
     const result = await this.geminiService.ask(prompt);
@@ -267,10 +268,10 @@ Do not provide overall/grade/total: the server computes the weighted result.
       ) &&
       typeof e.language === 'number' &&
       [e.technical, e.communication, e.language, e.confidence].every(
-        (v) => Number.isFinite(v) && v >= 0 && v <= 10,
+        (v) => Number.isFinite(v) && v >= 0 && v <= 30,
       );
     const totalScore = complete
-      ? total30({
+      ? average30({
           technical: e.technical,
           communication: e.communication,
           language: e.language,
@@ -280,7 +281,8 @@ Do not provide overall/grade/total: the server computes the weighted result.
     return {
       ...e,
       totalScore,
-      scoreMax: complete ? 30 : 10,
+      scoreMax: e.rubricVersion === RUBRIC_VERSION ? 30 : 10,
+      dimensionScoreMax: e.rubricVersion === RUBRIC_VERSION ? 30 : 10,
       grade: totalScore === null ? null : grade30(totalScore),
     };
   }

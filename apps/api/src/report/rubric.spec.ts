@@ -1,9 +1,9 @@
-import { RUBRIC, parseRubricEvaluation, total30, grade30 } from './rubric';
+import { RUBRIC, parseRubricEvaluation, average30, grade30 } from './rubric';
 const valid = {
-  technical: 8,
-  communication: 8,
-  language: 8,
-  confidence: 8,
+  technical: 24,
+  communication: 27,
+  language: 21,
+  confidence: 30,
   dimensionFeedback: Object.fromEntries(
     ['technical', 'communication', 'language', 'confidence'].map((k) => [
       k,
@@ -15,13 +15,13 @@ const valid = {
   feedback: 'ควรเพิ่มตัวอย่างจากประสบการณ์จริง',
 };
 describe('30-point rubric', () => {
-  it('computes 24/30 and A from four 8/10 scores, ignoring AI overall', () => {
+  it('computes a 25.5/30 average from four /30 scores, ignoring AI overall', () => {
     const parsed = parseRubricEvaluation(
       JSON.stringify({ ...valid, overall: 0 }),
     );
-    expect(parsed.overall).toBe(8);
-    expect(total30(parsed)).toBe(24);
-    expect(grade30(total30(parsed))).toBe('A');
+    expect(parsed.overall).toBe(25.5);
+    expect(average30(parsed)).toBe(25.5);
+    expect(grade30(average30(parsed))).toBe('A');
     expect(RUBRIC.dimensions.reduce((sum, d) => sum + d.weight, 0)).toBe(1);
   });
   it.each([
@@ -37,18 +37,32 @@ describe('30-point rubric', () => {
   );
   it('accepts genuine zero and full marks', () => {
     expect(
-      total30({ technical: 0, communication: 0, language: 0, confidence: 0 }),
+      average30({ technical: 0, communication: 0, language: 0, confidence: 0 }),
     ).toBe(0);
     expect(
-      total30({
+      average30({
+        technical: 30,
+        communication: 30,
+        language: 30,
+        confidence: 30,
+      }),
+    ).toBe(30);
+  });
+  it('uses a direct /30 scale, so four 10-point scores average to 10, not 30', () => {
+    const parsed = parseRubricEvaluation(
+      JSON.stringify({
+        ...valid,
         technical: 10,
         communication: 10,
         language: 10,
         confidence: 10,
       }),
-    ).toBe(30);
+    );
+    expect(parsed.overall).toBe(10);
+    expect(grade30(parsed.overall)).toBe('F');
+    expect(RUBRIC.max).toBe(30);
   });
-  it.each([null, '8', -1, 11])(
+  it.each([null, '8', -1, 31])(
     'rejects invalid or missing language %s',
     (language) =>
       expect(() =>

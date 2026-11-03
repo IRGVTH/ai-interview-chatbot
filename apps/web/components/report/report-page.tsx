@@ -9,6 +9,9 @@ import {
   normalizeOverview,
   isEvaluationCurrent,
   canDownloadEvaluation,
+  applyNewEvaluation,
+  gradeFromTotalScore,
+  RUBRIC_VERSION,
   type Overview,
 } from "./report-data";
 function message(err: unknown) {
@@ -27,6 +30,11 @@ export function ReportPage() {
     [error, setError] = useState(""),
     [selected, setSelected] = useState(""),
     [busy, setBusy] = useState("");
+  const [scoreNotice, setScoreNotice] = useState<{
+    sessionId: string;
+    failed: boolean;
+    text: string;
+  } | null>(null);
   useEffect(() => {
     let live = true;
     if (!token) {
@@ -56,21 +64,48 @@ export function ReportPage() {
     };
   }, [token, router]);
   async function score(id: string) {
-    if (!token || busy) return;
+    if (!token || busy || !data) return;
     setBusy(id);
     setError("");
+    setScoreNotice(null);
     try {
-      await apiFetch(`/report/sessions/${id}/evaluate`, {
-        method: "POST",
-        token,
-      });
-      setData(
-        normalizeOverview(
-          await apiFetch<unknown>("/report/overview", { token }),
-        ),
+      const response = await apiFetch<unknown>(
+        `/report/sessions/${id}/evaluate`,
+        {
+          method: "POST",
+          token,
+        },
       );
+      // The POST returns the persisted evaluation. Apply that result directly,
+      // so a failed second GET cannot hide a successfully saved /30 result.
+      const updated = applyNewEvaluation(data, id, response);
+      setData(updated);
+      const evaluation = updated.sessions.find((s) => s.id === id)!.evaluation!;
+      setScoreNotice({
+        sessionId: id,
+        failed: false,
+        text: `บันทึกผลประเมินใหม่แล้ว ${evaluation.totalScore} / 30 คะแนน`,
+      });
+      try {
+        // Refresh conversation timestamps too, in case chat changed during AI scoring.
+        setData(
+          normalizeOverview(
+            await apiFetch<unknown>("/report/overview", { token }),
+          ),
+        );
+      } catch {
+        setScoreNotice({
+          sessionId: id,
+          failed: true,
+          text: `บันทึกผลประเมินใหม่แล้ว ${evaluation.totalScore} / 30 คะแนน แต่โหลดภาพรวมล่าสุดไม่สำเร็จ กรุณารีเฟรชหน้าเพื่อตรวจสถานะบทสนทนาล่าสุด`,
+        });
+      }
     } catch (err) {
-      setError(message(err));
+      setScoreNotice({
+        sessionId: id,
+        failed: true,
+        text: `ประเมินคะแนนเต็ม 30 ไม่สำเร็จ: ${message(err)} ผลที่แสดงด้านล่างยังเป็นผลเดิม กรุณาลองประเมินใหม่อีกครั้ง`,
+      });
     } finally {
       setBusy("");
     }
@@ -109,7 +144,9 @@ export function ReportPage() {
     <main className="space-y-6 text-black">
       <header>
         <h1 className="text-3xl font-bold">Interview Report</h1>
-        <p className="mt-2">คะแนนเต็ม 30 พร้อมเกณฑ์และเหตุผลแยกทั้ง 4 ด้าน</p>
+        <p className="mt-2">
+          ทั้ง 4 ด้านเต็มด้านละ 30 คะแนน พร้อมคะแนนเฉลี่ยเต็ม 30 และเกรด
+        </p>
       </header>
       {error && (
         <p role="alert" className="rounded-xl bg-red-50 p-4 text-red-700">
@@ -243,16 +280,29 @@ export function ReportPage() {
                     : "ดาวน์โหลด PDF"}
                 </button>
               </div>
+              {busy === session.id && (
+                <p role="status" className="rounded-xl bg-blue-50 p-4">
+                  กำลังขอผลประเมินใหม่จาก AI
+                  คะแนนด้านล่างยังเป็นผลเดิมจนกว่าจะบันทึกสำเร็จ
+                </p>
+              )}
+              {scoreNotice?.sessionId === session.id && (
+                <p
+                  role={scoreNotice.failed ? "alert" : "status"}
+                  className={`rounded-xl p-4 ${scoreNotice.failed ? "bg-red-50 text-red-700" : "bg-green-50 text-green-800"}`}
+                >
+                  {scoreNotice.text}
+                </p>
+              )}
               {!e ? (
                 <p>กรุณาประเมินเพื่อดูคะแนนและเหตุผลรายด้าน</p>
               ) : (
                 <>
                   {e.totalScore === null ? (
                     <p role="status" className="rounded-xl bg-amber-50 p-4">
-                      นี่คือผลเดิมเต็ม 10
-                      ยังไม่มีคะแนนภาษาและเหตุผลครบตามเกณฑ์ใหม่
-                      กรุณากดประเมินใหม่ ผลเก่าจะไม่ถูกแปลงเป็นเต็ม 30
-                      โดยอัตโนมัติ
+                      {e.rubricVersion === RUBRIC_VERSION
+                        ? "ผลประเมินยังไม่ครบทั้ง 4 ด้าน กรุณาประเมินใหม่"
+                        : "นี่คือผลเกณฑ์เดิมที่แต่ละด้านเต็ม 10 กรุณาประเมินใหม่เพื่อให้ทั้ง 4 ด้านเต็มด้านละ 30 และคำนวณคะแนนเฉลี่ยใหม่"}
                     </p>
                   ) : (
                     !isEvaluationCurrent(session) && (
@@ -264,10 +314,14 @@ export function ReportPage() {
                   )}
                   <div className="flex flex-wrap items-center gap-6 rounded-xl bg-indigo-50 p-6">
                     <div>
-                      <p>เกรดผลการฝึก{e.totalScore === null ? "เดิม" : ""}</p>
+                      <p>
+                        เกรดจากคะแนนเฉลี่ย
+                        {e.rubricVersion !== RUBRIC_VERSION ? " (ผลเดิม)" : ""}
+                      </p>
                       <strong className="text-5xl">{e.grade ?? "—"}</strong>
                     </div>
                     <div>
+                      <p>คะแนนเฉลี่ยทั้ง 4 ด้าน</p>
                       <p className="text-3xl font-bold">
                         {e.displayScore ?? "—"} / {e.scoreMax}
                       </p>
@@ -276,8 +330,8 @@ export function ReportPage() {
                   </div>
                   <p className="text-sm">{data.gradeScale.description}</p>
                   <p className="text-sm">
-                    สูตรใหม่: (ผลรวมคะแนนดิบ 4 ด้าน ÷ 40) × 30
-                    แต่ละด้านมีน้ำหนัก 25% หรือสูงสุด 7.5 คะแนน
+                    สูตรใหม่: คะแนนเฉลี่ย = ผลรวมคะแนนทั้ง 4 ด้าน ÷ 4
+                    ทุกด้านเต็มด้านละ 30 คะแนน และคะแนนเฉลี่ยเต็ม 30
                   </p>
                   <div className="grid gap-4 lg:grid-cols-2">
                     {(
@@ -299,12 +353,11 @@ export function ReportPage() {
                           <h3 className="font-semibold">{d.label}</h3>
                           <p className="text-2xl font-bold">
                             {value ?? "ยังไม่ได้ประเมิน"}
-                            {value !== null ? " / 10" : ""}
+                            {value !== null ? ` / ${e.dimensionScoreMax}` : ""}
                           </p>
                           {value !== null && e.totalScore !== null && (
                             <p className="text-sm text-indigo-700">
-                              คิดเป็น {Number((value * 0.75).toFixed(2))} / 7.5
-                              คะแนน
+                              เกรด {gradeFromTotalScore(value) ?? "—"}
                             </p>
                           )}
                           <p className="text-sm text-gray-600">{d.criteria}</p>
@@ -333,7 +386,7 @@ export function ReportPage() {
                   </div>
                   <p className="text-sm text-gray-600">
                     คะแนนย่อยที่แสดงปัดเพื่ออ่านง่าย
-                    คะแนนรวมคำนวณจากคะแนนดิบโดยไม่ปัดระหว่างทาง
+                    คะแนนเฉลี่ยคำนวณจากคะแนนทั้ง 4 ด้านโดยไม่ปัดระหว่างทาง
                   </p>
                   <h3 className="font-semibold">ข้อเสนอแนะภาพรวม</h3>
                   <p className="whitespace-pre-wrap">{e.feedback}</p>

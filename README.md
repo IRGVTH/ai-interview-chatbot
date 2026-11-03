@@ -60,12 +60,17 @@ FRONTEND_URL="http://localhost:3000"
 PORT=4000
 GEMINI_API_KEY="your-gemini-api-key"
 GEMINI_MODEL="gemini-3.1-flash-lite"
-GEMINI_FALLBACK_MODELS="gemini-3.8-flash"
+GEMINI_FALLBACK_MODELS="gemini-3.5-flash-lite,gemini-3.8-flash"
 ```
 
 `GEMINI_MODEL` and `GEMINI_FALLBACK_MODELS` are optional server-side settings.
 The fallback setting accepts comma-separated model IDs; an empty value disables
 fallbacks. Choose models available to the API key's Google AI project.
+When a model responds with 503, the API tries the next configured model immediately;
+the last model retains bounded retries with exponential backoff. If every model
+fails, Reports keeps the previous evaluation and displays the failure beside the
+evaluation button. Only a successful four-dimension evaluation replaces a /10
+result with a /30 result.
 Restart/redeploy the **API service** after changing these values (a Vercel frontend
 redeploy alone does not update the backend).
 
@@ -183,8 +188,13 @@ pnpm --filter @ai-interview/database exec prisma migrate deploy
 
 The report-rubric migration adds nullable language/reason/snapshot/source timestamp
 fields and preserves existing SRS columns if present. Historical scores are not
-rewritten. Re-score to produce interview-30-v1 evaluations with all four reasons.
-Each dimension is 0–10, weighted 25%; total = sum(dimensions) * 0.75 (max 30).
-The existing overall database field remains the four-dimension mean on 0–10 for
-compatibility; the API computes totalScore and grade. Only current 30-point
-results contribute to the new average. Deploy API and web together.
+rewritten. Re-score to produce interview-dimensions-30-v2 evaluations with all four reasons.
+Each of the four dimensions is scored directly on 0–30. The session average is
+sum(dimensions) / 4, also out of 30; for example 24, 27, 21, 30 average to 25.5/30 (A).
+The existing overall database field stores that /30 average for this rubric version;
+the API's totalScore field exposes the same average for client compatibility.
+Reports and PDF show every dimension /30, its reason and grade, and the session
+average /30 with a grade. Only current, complete v2 results contribute to the
+dashboard average. The old /10 rubrics (including interview-30-v1) stay historical
+and require re-evaluation; their numbers are never relabeled /30. No additional
+database migration is needed for this scoring correction. Deploy API and web together.

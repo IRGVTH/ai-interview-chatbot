@@ -23,7 +23,6 @@ export class UpdateInterviewDto extends PartialType(CreateInterviewDto) {
 
   @IsOptional()
   @IsString()
-  @MinLength(2)
   summary?: string;
   @IsOptional()
   @IsString()

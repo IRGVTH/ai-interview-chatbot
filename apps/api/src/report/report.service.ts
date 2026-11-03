@@ -118,7 +118,7 @@ export class ReportService {
     };
   }
 
-  async getEvaluation(userId: string, sessionId: string) {
+  async getSessionReport(userId: string, sessionId: string) {
     const session = (await this.prisma.chatSession.findFirst({
       where: {
         id: sessionId,
@@ -137,7 +137,11 @@ export class ReportService {
       throw new NotFoundException('Chat session not found');
     }
 
-    return session.evaluation;
+    return session;
+  }
+
+  async getEvaluation(userId: string, sessionId: string) {
+    return (await this.getSessionReport(userId, sessionId)).evaluation;
   }
 
   async evaluateSession(userId: string, sessionId: string) {

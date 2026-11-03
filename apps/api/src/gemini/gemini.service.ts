@@ -1,12 +1,11 @@
 import {
   Injectable,
-  InternalServerErrorException,
   Logger,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenAI } from '@google/genai';
 
-type GeminiModel = 'gemini-3.1-flash-lite' | 'gemini-3.7-flash';
 type StreamChunk = { text?: string };
 
 type RetryableGeminiError = {
@@ -22,10 +21,7 @@ type RetryableGeminiError = {
 export class GeminiService {
   private readonly logger = new Logger(GeminiService.name);
   private readonly ai: GoogleGenAI;
-  private readonly models: GeminiModel[] = [
-    'gemini-3.1-flash-lite',
-    'gemini-3.7-flash',
-  ];
+  private readonly models: string[];
   private formatStatus(status: unknown) {
     return typeof status === 'string' || typeof status === 'number'
       ? String(status)
@@ -39,6 +35,18 @@ export class GeminiService {
     }
 
     this.ai = new GoogleGenAI({ apiKey });
+    const primary = this.configService.get<string>('GEMINI_MODEL')?.trim();
+    const fallbacks = this.configService
+      .get<string>('GEMINI_FALLBACK_MODELS')
+      ?.split(',')
+      .map((model) => model.trim())
+      .filter(Boolean);
+    this.models = [
+      ...new Set([
+        primary || 'gemini-3.1-flash-lite',
+        ...(fallbacks ?? ['gemini-3.8-flash']),
+      ]),
+    ];
   }
 
   async ask(prompt: string) {
@@ -73,6 +81,14 @@ export class GeminiService {
           lastError = error;
 
           const { status, isRetryable } = this.getRetryInfo(error, true);
+          if (
+            status === 400 ||
+            status === 401 ||
+            status === 402 ||
+            status === 403
+          ) {
+            throw this.toPublicError(error);
+          }
 
           this.logger.warn(
             `Gemini ask failed model=${model} attempt=${attempt} status=${this.formatStatus(
@@ -97,7 +113,7 @@ export class GeminiService {
       'Gemini final error',
       lastError instanceof Error ? lastError.stack : undefined,
     );
-    throw new InternalServerErrorException('Gemini request failed');
+    throw this.toPublicError(lastError);
   }
 
   async stream(prompt: string) {
@@ -129,6 +145,14 @@ export class GeminiService {
           lastError = error;
 
           const { status, isRetryable } = this.getRetryInfo(error, false);
+          if (
+            status === 400 ||
+            status === 401 ||
+            status === 402 ||
+            status === 403
+          ) {
+            throw this.toPublicError(error);
+          }
 
           this.logger.warn(
             `Gemini stream failed model=${model} attempt=${attempt} status=${this.formatStatus(
@@ -153,13 +177,15 @@ export class GeminiService {
       'Gemini stream final error',
       lastError instanceof Error ? lastError.stack : undefined,
     );
-    throw new InternalServerErrorException('Gemini request failed');
+    throw this.toPublicError(lastError);
   }
 
   private getRetryInfo(error: unknown, includeTimeout: boolean) {
     const candidate = error as RetryableGeminiError | null;
 
-    const status = candidate?.status ?? candidate?.error?.code;
+    const rawStatus = candidate?.status ?? candidate?.error?.code;
+    const status =
+      typeof rawStatus === 'string' ? Number(rawStatus) : rawStatus;
     const isRetryable =
       status === 429 ||
       status === 503 ||
@@ -168,6 +194,36 @@ export class GeminiService {
       (includeTimeout && candidate?.name === 'TimeoutError');
 
     return { status, isRetryable };
+  }
+
+  private toPublicError(error: unknown) {
+    const { status } = this.getRetryInfo(error, true);
+    // Never expose the provider response: it can contain request or key details.
+    if (status === 400 || status === 401 || status === 403) {
+      return new ServiceUnavailableException({
+        code: 'GEMINI_CONFIGURATION_ERROR',
+        message:
+          'Gemini configuration error. Please ask the administrator to check GEMINI_API_KEY, API access, billing, and request configuration.',
+      });
+    }
+    if (status === 402 || status === 429) {
+      return new ServiceUnavailableException({
+        code: 'GEMINI_QUOTA_EXCEEDED',
+        message:
+          'Gemini quota or billing limit reached. Please try again later or ask the administrator to check the Gemini project quota and billing.',
+      });
+    }
+    if (status === 404) {
+      return new ServiceUnavailableException({
+        code: 'GEMINI_MODEL_UNAVAILABLE',
+        message:
+          'The configured Gemini models are unavailable. Please ask the administrator to check GEMINI_MODEL and GEMINI_FALLBACK_MODELS.',
+      });
+    }
+    return new ServiceUnavailableException({
+      code: 'GEMINI_UNAVAILABLE',
+      message: 'Gemini is temporarily unavailable. Please try again shortly.',
+    });
   }
 
   private getBackoffDelayMs(attempt: number) {

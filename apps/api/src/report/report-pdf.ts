@@ -1,9 +1,17 @@
+import {
+  RUBRIC,
+  RUBRIC_VERSION,
+  total30,
+  grade30,
+  DimensionKey,
+} from './rubric';
 import * as PDFDocument from 'pdfkit';
 import { join } from 'node:path';
 
 export type PdfReport = {
   id: string;
   title: string | null;
+  lastMessageAt?: Date | null;
   interview: {
     title: string;
     interviewType?: string | null;
@@ -12,6 +20,11 @@ export type PdfReport = {
     difficulty: string;
   };
   evaluation: {
+    language?: number | null;
+    rubricVersion?: string;
+    rubricSnapshot?: unknown;
+    dimensionFeedback?: Record<string, string> | null;
+    evaluatedThrough?: Date | null;
     communication: number;
     technical: number;
     confidence: number;
@@ -23,7 +36,7 @@ export type PdfReport = {
   } | null;
 };
 
-// Uses only existing evaluation fields; no schema migration or new AI call.
+// Exports saved scores and rubric reasons; no new AI request during download.
 export async function renderReportPdf(session: PdfReport): Promise<Buffer> {
   const e = session.evaluation;
   if (!e) throw new Error('An evaluation is required');
@@ -62,10 +75,46 @@ export async function renderReportPdf(session: PdfReport): Promise<Buffer> {
     text(
       `ประเมินเมื่อ: ${new Intl.DateTimeFormat('th-TH', { dateStyle: 'long', timeStyle: 'short', timeZone: 'Asia/Bangkok' }).format(e.updatedAt)}`,
     );
-    text('คะแนนประเมิน (เต็ม 10)', 16);
-    text(
-      `การสื่อสาร: ${e.communication}\nความรู้ทางเทคนิค: ${e.technical}\nความมั่นใจจากคำตอบ: ${e.confidence}\nคะแนนรวม: ${e.overall}`,
-    );
+    const isNew =
+      e.rubricVersion === RUBRIC_VERSION && typeof e.language === 'number';
+    if (isNew) {
+      const scores = {
+        technical: e.technical,
+        communication: e.communication,
+        language: e.language,
+        confidence: e.confidence,
+      };
+      const total = total30(scores);
+      const rubric =
+        e.rubricSnapshot && typeof e.rubricSnapshot === 'object'
+          ? (e.rubricSnapshot as typeof RUBRIC)
+          : RUBRIC;
+      text(`คะแนนรวม ${total} / 30 · เกรด ${grade30(total)}`, 17);
+      text(`เกณฑ์ ${e.rubricVersion}`);
+      text(rubric.formula || RUBRIC.formula);
+      text(rubric.gradeScale?.description || RUBRIC.gradeScale.description);
+      for (const d of rubric.dimensions || RUBRIC.dimensions) {
+        const raw = scores[d.key as DimensionKey];
+        text(
+          `${d.label}: ${raw} / 10 (คิดเป็น ${Number((raw * 0.75).toFixed(2))} / 7.5)`,
+          15,
+        );
+        text(
+          `เหตุผลที่ได้คะแนน: ${e.dimensionFeedback?.[d.key] || 'ไม่มีเหตุผลที่บันทึกไว้ กรุณาประเมินใหม่'}`,
+        );
+        text(`วัดจาก: ${d.criteria}`);
+        for (const level of d.levels) text(level, 10);
+      }
+      text(rubric.limitation || RUBRIC.limitation, 10);
+    } else {
+      text('ผลประเมินเดิม (เต็ม 10)', 16);
+      text(
+        `ความถูกต้องและเนื้อหา: ${e.technical}\nความชัดเจน: ${e.communication}\nการสื่อสารที่สะท้อนความมั่นใจ: ${e.confidence}\nคะแนนรวมเดิม: ${e.overall} / 10`,
+      );
+      text(
+        'ต้องประเมินใหม่เพื่อให้ได้คะแนนเต็ม 30 พร้อมคะแนนภาษาและเหตุผลครบ 4 ด้าน',
+      );
+    }
     text('ข้อเสนอแนะ', 16);
     text(e.feedback || 'ไม่มีข้อเสนอแนะ');
     for (const [label, values] of [

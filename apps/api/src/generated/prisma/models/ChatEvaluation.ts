@@ -26,6 +26,7 @@ export type AggregateChatEvaluation = {
 }
 
 export type ChatEvaluationAvgAggregateOutputType = {
+  language: number | null
   communication: number | null
   technical: number | null
   confidence: number | null
@@ -33,6 +34,7 @@ export type ChatEvaluationAvgAggregateOutputType = {
 }
 
 export type ChatEvaluationSumAggregateOutputType = {
+  language: number | null
   communication: number | null
   technical: number | null
   confidence: number | null
@@ -42,6 +44,9 @@ export type ChatEvaluationSumAggregateOutputType = {
 export type ChatEvaluationMinAggregateOutputType = {
   id: string | null
   sessionId: string | null
+  language: number | null
+  rubricVersion: string | null
+  evaluatedThrough: Date | null
   communication: number | null
   technical: number | null
   confidence: number | null
@@ -55,6 +60,9 @@ export type ChatEvaluationMinAggregateOutputType = {
 export type ChatEvaluationMaxAggregateOutputType = {
   id: string | null
   sessionId: string | null
+  language: number | null
+  rubricVersion: string | null
+  evaluatedThrough: Date | null
   communication: number | null
   technical: number | null
   confidence: number | null
@@ -68,6 +76,11 @@ export type ChatEvaluationMaxAggregateOutputType = {
 export type ChatEvaluationCountAggregateOutputType = {
   id: number
   sessionId: number
+  language: number
+  rubricVersion: number
+  rubricSnapshot: number
+  dimensionFeedback: number
+  evaluatedThrough: number
   communication: number
   technical: number
   confidence: number
@@ -83,6 +96,7 @@ export type ChatEvaluationCountAggregateOutputType = {
 
 
 export type ChatEvaluationAvgAggregateInputType = {
+  language?: true
   communication?: true
   technical?: true
   confidence?: true
@@ -90,6 +104,7 @@ export type ChatEvaluationAvgAggregateInputType = {
 }
 
 export type ChatEvaluationSumAggregateInputType = {
+  language?: true
   communication?: true
   technical?: true
   confidence?: true
@@ -99,6 +114,9 @@ export type ChatEvaluationSumAggregateInputType = {
 export type ChatEvaluationMinAggregateInputType = {
   id?: true
   sessionId?: true
+  language?: true
+  rubricVersion?: true
+  evaluatedThrough?: true
   communication?: true
   technical?: true
   confidence?: true
@@ -112,6 +130,9 @@ export type ChatEvaluationMinAggregateInputType = {
 export type ChatEvaluationMaxAggregateInputType = {
   id?: true
   sessionId?: true
+  language?: true
+  rubricVersion?: true
+  evaluatedThrough?: true
   communication?: true
   technical?: true
   confidence?: true
@@ -125,6 +146,11 @@ export type ChatEvaluationMaxAggregateInputType = {
 export type ChatEvaluationCountAggregateInputType = {
   id?: true
   sessionId?: true
+  language?: true
+  rubricVersion?: true
+  rubricSnapshot?: true
+  dimensionFeedback?: true
+  evaluatedThrough?: true
   communication?: true
   technical?: true
   confidence?: true
@@ -227,6 +253,11 @@ export type ChatEvaluationGroupByArgs<ExtArgs extends runtime.Types.Extensions.I
 export type ChatEvaluationGroupByOutputType = {
   id: string
   sessionId: string
+  language: number | null
+  rubricVersion: string
+  rubricSnapshot: runtime.JsonValue | null
+  dimensionFeedback: runtime.JsonValue | null
+  evaluatedThrough: Date | null
   communication: number
   technical: number
   confidence: number
@@ -265,6 +296,11 @@ export type ChatEvaluationWhereInput = {
   NOT?: Prisma.ChatEvaluationWhereInput | Prisma.ChatEvaluationWhereInput[]
   id?: Prisma.StringFilter<"ChatEvaluation"> | string
   sessionId?: Prisma.StringFilter<"ChatEvaluation"> | string
+  language?: Prisma.FloatNullableFilter<"ChatEvaluation"> | number | null
+  rubricVersion?: Prisma.StringFilter<"ChatEvaluation"> | string
+  rubricSnapshot?: Prisma.JsonNullableFilter<"ChatEvaluation">
+  dimensionFeedback?: Prisma.JsonNullableFilter<"ChatEvaluation">
+  evaluatedThrough?: Prisma.DateTimeNullableFilter<"ChatEvaluation"> | Date | string | null
   communication?: Prisma.FloatFilter<"ChatEvaluation"> | number
   technical?: Prisma.FloatFilter<"ChatEvaluation"> | number
   confidence?: Prisma.FloatFilter<"ChatEvaluation"> | number
@@ -281,6 +317,11 @@ export type ChatEvaluationWhereInput = {
 export type ChatEvaluationOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
+  language?: Prisma.SortOrderInput | Prisma.SortOrder
+  rubricVersion?: Prisma.SortOrder
+  rubricSnapshot?: Prisma.SortOrderInput | Prisma.SortOrder
+  dimensionFeedback?: Prisma.SortOrderInput | Prisma.SortOrder
+  evaluatedThrough?: Prisma.SortOrderInput | Prisma.SortOrder
   communication?: Prisma.SortOrder
   technical?: Prisma.SortOrder
   confidence?: Prisma.SortOrder
@@ -300,6 +341,11 @@ export type ChatEvaluationWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.ChatEvaluationWhereInput | Prisma.ChatEvaluationWhereInput[]
   OR?: Prisma.ChatEvaluationWhereInput[]
   NOT?: Prisma.ChatEvaluationWhereInput | Prisma.ChatEvaluationWhereInput[]
+  language?: Prisma.FloatNullableFilter<"ChatEvaluation"> | number | null
+  rubricVersion?: Prisma.StringFilter<"ChatEvaluation"> | string
+  rubricSnapshot?: Prisma.JsonNullableFilter<"ChatEvaluation">
+  dimensionFeedback?: Prisma.JsonNullableFilter<"ChatEvaluation">
+  evaluatedThrough?: Prisma.DateTimeNullableFilter<"ChatEvaluation"> | Date | string | null
   communication?: Prisma.FloatFilter<"ChatEvaluation"> | number
   technical?: Prisma.FloatFilter<"ChatEvaluation"> | number
   confidence?: Prisma.FloatFilter<"ChatEvaluation"> | number
@@ -316,6 +362,11 @@ export type ChatEvaluationWhereUniqueInput = Prisma.AtLeast<{
 export type ChatEvaluationOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
+  language?: Prisma.SortOrderInput | Prisma.SortOrder
+  rubricVersion?: Prisma.SortOrder
+  rubricSnapshot?: Prisma.SortOrderInput | Prisma.SortOrder
+  dimensionFeedback?: Prisma.SortOrderInput | Prisma.SortOrder
+  evaluatedThrough?: Prisma.SortOrderInput | Prisma.SortOrder
   communication?: Prisma.SortOrder
   technical?: Prisma.SortOrder
   confidence?: Prisma.SortOrder
@@ -339,6 +390,11 @@ export type ChatEvaluationScalarWhereWithAggregatesInput = {
   NOT?: Prisma.ChatEvaluationScalarWhereWithAggregatesInput | Prisma.ChatEvaluationScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"ChatEvaluation"> | string
   sessionId?: Prisma.StringWithAggregatesFilter<"ChatEvaluation"> | string
+  language?: Prisma.FloatNullableWithAggregatesFilter<"ChatEvaluation"> | number | null
+  rubricVersion?: Prisma.StringWithAggregatesFilter<"ChatEvaluation"> | string
+  rubricSnapshot?: Prisma.JsonNullableWithAggregatesFilter<"ChatEvaluation">
+  dimensionFeedback?: Prisma.JsonNullableWithAggregatesFilter<"ChatEvaluation">
+  evaluatedThrough?: Prisma.DateTimeNullableWithAggregatesFilter<"ChatEvaluation"> | Date | string | null
   communication?: Prisma.FloatWithAggregatesFilter<"ChatEvaluation"> | number
   technical?: Prisma.FloatWithAggregatesFilter<"ChatEvaluation"> | number
   confidence?: Prisma.FloatWithAggregatesFilter<"ChatEvaluation"> | number
@@ -353,6 +409,11 @@ export type ChatEvaluationScalarWhereWithAggregatesInput = {
 
 export type ChatEvaluationCreateInput = {
   id?: string
+  language?: number | null
+  rubricVersion?: string
+  rubricSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  dimensionFeedback?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  evaluatedThrough?: Date | string | null
   communication: number
   technical: number
   confidence: number
@@ -369,6 +430,11 @@ export type ChatEvaluationCreateInput = {
 export type ChatEvaluationUncheckedCreateInput = {
   id?: string
   sessionId: string
+  language?: number | null
+  rubricVersion?: string
+  rubricSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  dimensionFeedback?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  evaluatedThrough?: Date | string | null
   communication: number
   technical: number
   confidence: number
@@ -383,6 +449,11 @@ export type ChatEvaluationUncheckedCreateInput = {
 
 export type ChatEvaluationUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  language?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  rubricVersion?: Prisma.StringFieldUpdateOperationsInput | string
+  rubricSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  dimensionFeedback?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  evaluatedThrough?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   communication?: Prisma.FloatFieldUpdateOperationsInput | number
   technical?: Prisma.FloatFieldUpdateOperationsInput | number
   confidence?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -399,6 +470,11 @@ export type ChatEvaluationUpdateInput = {
 export type ChatEvaluationUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  language?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  rubricVersion?: Prisma.StringFieldUpdateOperationsInput | string
+  rubricSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  dimensionFeedback?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  evaluatedThrough?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   communication?: Prisma.FloatFieldUpdateOperationsInput | number
   technical?: Prisma.FloatFieldUpdateOperationsInput | number
   confidence?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -414,6 +490,11 @@ export type ChatEvaluationUncheckedUpdateInput = {
 export type ChatEvaluationCreateManyInput = {
   id?: string
   sessionId: string
+  language?: number | null
+  rubricVersion?: string
+  rubricSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  dimensionFeedback?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  evaluatedThrough?: Date | string | null
   communication: number
   technical: number
   confidence: number
@@ -428,6 +509,11 @@ export type ChatEvaluationCreateManyInput = {
 
 export type ChatEvaluationUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  language?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  rubricVersion?: Prisma.StringFieldUpdateOperationsInput | string
+  rubricSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  dimensionFeedback?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  evaluatedThrough?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   communication?: Prisma.FloatFieldUpdateOperationsInput | number
   technical?: Prisma.FloatFieldUpdateOperationsInput | number
   confidence?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -443,6 +529,11 @@ export type ChatEvaluationUpdateManyMutationInput = {
 export type ChatEvaluationUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   sessionId?: Prisma.StringFieldUpdateOperationsInput | string
+  language?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  rubricVersion?: Prisma.StringFieldUpdateOperationsInput | string
+  rubricSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  dimensionFeedback?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  evaluatedThrough?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   communication?: Prisma.FloatFieldUpdateOperationsInput | number
   technical?: Prisma.FloatFieldUpdateOperationsInput | number
   confidence?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -463,6 +554,11 @@ export type ChatEvaluationNullableScalarRelationFilter = {
 export type ChatEvaluationCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
+  language?: Prisma.SortOrder
+  rubricVersion?: Prisma.SortOrder
+  rubricSnapshot?: Prisma.SortOrder
+  dimensionFeedback?: Prisma.SortOrder
+  evaluatedThrough?: Prisma.SortOrder
   communication?: Prisma.SortOrder
   technical?: Prisma.SortOrder
   confidence?: Prisma.SortOrder
@@ -476,6 +572,7 @@ export type ChatEvaluationCountOrderByAggregateInput = {
 }
 
 export type ChatEvaluationAvgOrderByAggregateInput = {
+  language?: Prisma.SortOrder
   communication?: Prisma.SortOrder
   technical?: Prisma.SortOrder
   confidence?: Prisma.SortOrder
@@ -485,6 +582,9 @@ export type ChatEvaluationAvgOrderByAggregateInput = {
 export type ChatEvaluationMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
+  language?: Prisma.SortOrder
+  rubricVersion?: Prisma.SortOrder
+  evaluatedThrough?: Prisma.SortOrder
   communication?: Prisma.SortOrder
   technical?: Prisma.SortOrder
   confidence?: Prisma.SortOrder
@@ -498,6 +598,9 @@ export type ChatEvaluationMaxOrderByAggregateInput = {
 export type ChatEvaluationMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   sessionId?: Prisma.SortOrder
+  language?: Prisma.SortOrder
+  rubricVersion?: Prisma.SortOrder
+  evaluatedThrough?: Prisma.SortOrder
   communication?: Prisma.SortOrder
   technical?: Prisma.SortOrder
   confidence?: Prisma.SortOrder
@@ -509,6 +612,7 @@ export type ChatEvaluationMinOrderByAggregateInput = {
 }
 
 export type ChatEvaluationSumOrderByAggregateInput = {
+  language?: Prisma.SortOrder
   communication?: Prisma.SortOrder
   technical?: Prisma.SortOrder
   confidence?: Prisma.SortOrder
@@ -547,6 +651,14 @@ export type ChatEvaluationUncheckedUpdateOneWithoutSessionNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.ChatEvaluationUpdateToOneWithWhereWithoutSessionInput, Prisma.ChatEvaluationUpdateWithoutSessionInput>, Prisma.ChatEvaluationUncheckedUpdateWithoutSessionInput>
 }
 
+export type NullableFloatFieldUpdateOperationsInput = {
+  set?: number | null
+  increment?: number
+  decrement?: number
+  multiply?: number
+  divide?: number
+}
+
 export type FloatFieldUpdateOperationsInput = {
   set?: number
   increment?: number
@@ -557,6 +669,11 @@ export type FloatFieldUpdateOperationsInput = {
 
 export type ChatEvaluationCreateWithoutSessionInput = {
   id?: string
+  language?: number | null
+  rubricVersion?: string
+  rubricSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  dimensionFeedback?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  evaluatedThrough?: Date | string | null
   communication: number
   technical: number
   confidence: number
@@ -571,6 +688,11 @@ export type ChatEvaluationCreateWithoutSessionInput = {
 
 export type ChatEvaluationUncheckedCreateWithoutSessionInput = {
   id?: string
+  language?: number | null
+  rubricVersion?: string
+  rubricSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  dimensionFeedback?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  evaluatedThrough?: Date | string | null
   communication: number
   technical: number
   confidence: number
@@ -601,6 +723,11 @@ export type ChatEvaluationUpdateToOneWithWhereWithoutSessionInput = {
 
 export type ChatEvaluationUpdateWithoutSessionInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  language?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  rubricVersion?: Prisma.StringFieldUpdateOperationsInput | string
+  rubricSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  dimensionFeedback?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  evaluatedThrough?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   communication?: Prisma.FloatFieldUpdateOperationsInput | number
   technical?: Prisma.FloatFieldUpdateOperationsInput | number
   confidence?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -615,6 +742,11 @@ export type ChatEvaluationUpdateWithoutSessionInput = {
 
 export type ChatEvaluationUncheckedUpdateWithoutSessionInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  language?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  rubricVersion?: Prisma.StringFieldUpdateOperationsInput | string
+  rubricSnapshot?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  dimensionFeedback?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  evaluatedThrough?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   communication?: Prisma.FloatFieldUpdateOperationsInput | number
   technical?: Prisma.FloatFieldUpdateOperationsInput | number
   confidence?: Prisma.FloatFieldUpdateOperationsInput | number
@@ -632,6 +764,11 @@ export type ChatEvaluationUncheckedUpdateWithoutSessionInput = {
 export type ChatEvaluationSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   sessionId?: boolean
+  language?: boolean
+  rubricVersion?: boolean
+  rubricSnapshot?: boolean
+  dimensionFeedback?: boolean
+  evaluatedThrough?: boolean
   communication?: boolean
   technical?: boolean
   confidence?: boolean
@@ -648,6 +785,11 @@ export type ChatEvaluationSelect<ExtArgs extends runtime.Types.Extensions.Intern
 export type ChatEvaluationSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   sessionId?: boolean
+  language?: boolean
+  rubricVersion?: boolean
+  rubricSnapshot?: boolean
+  dimensionFeedback?: boolean
+  evaluatedThrough?: boolean
   communication?: boolean
   technical?: boolean
   confidence?: boolean
@@ -664,6 +806,11 @@ export type ChatEvaluationSelectCreateManyAndReturn<ExtArgs extends runtime.Type
 export type ChatEvaluationSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   sessionId?: boolean
+  language?: boolean
+  rubricVersion?: boolean
+  rubricSnapshot?: boolean
+  dimensionFeedback?: boolean
+  evaluatedThrough?: boolean
   communication?: boolean
   technical?: boolean
   confidence?: boolean
@@ -680,6 +827,11 @@ export type ChatEvaluationSelectUpdateManyAndReturn<ExtArgs extends runtime.Type
 export type ChatEvaluationSelectScalar = {
   id?: boolean
   sessionId?: boolean
+  language?: boolean
+  rubricVersion?: boolean
+  rubricSnapshot?: boolean
+  dimensionFeedback?: boolean
+  evaluatedThrough?: boolean
   communication?: boolean
   technical?: boolean
   confidence?: boolean
@@ -692,7 +844,7 @@ export type ChatEvaluationSelectScalar = {
   updatedAt?: boolean
 }
 
-export type ChatEvaluationOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "sessionId" | "communication" | "technical" | "confidence" | "overall" | "strengths" | "improvements" | "feedback" | "rawResponse" | "createdAt" | "updatedAt", ExtArgs["result"]["chatEvaluation"]>
+export type ChatEvaluationOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "sessionId" | "language" | "rubricVersion" | "rubricSnapshot" | "dimensionFeedback" | "evaluatedThrough" | "communication" | "technical" | "confidence" | "overall" | "strengths" | "improvements" | "feedback" | "rawResponse" | "createdAt" | "updatedAt", ExtArgs["result"]["chatEvaluation"]>
 export type ChatEvaluationInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   session?: boolean | Prisma.ChatSessionDefaultArgs<ExtArgs>
 }
@@ -711,6 +863,11 @@ export type $ChatEvaluationPayload<ExtArgs extends runtime.Types.Extensions.Inte
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     sessionId: string
+    language: number | null
+    rubricVersion: string
+    rubricSnapshot: runtime.JsonValue | null
+    dimensionFeedback: runtime.JsonValue | null
+    evaluatedThrough: Date | null
     communication: number
     technical: number
     confidence: number
@@ -1147,6 +1304,11 @@ export interface Prisma__ChatEvaluationClient<T, Null = never, ExtArgs extends r
 export interface ChatEvaluationFieldRefs {
   readonly id: Prisma.FieldRef<"ChatEvaluation", 'String'>
   readonly sessionId: Prisma.FieldRef<"ChatEvaluation", 'String'>
+  readonly language: Prisma.FieldRef<"ChatEvaluation", 'Float'>
+  readonly rubricVersion: Prisma.FieldRef<"ChatEvaluation", 'String'>
+  readonly rubricSnapshot: Prisma.FieldRef<"ChatEvaluation", 'Json'>
+  readonly dimensionFeedback: Prisma.FieldRef<"ChatEvaluation", 'Json'>
+  readonly evaluatedThrough: Prisma.FieldRef<"ChatEvaluation", 'DateTime'>
   readonly communication: Prisma.FieldRef<"ChatEvaluation", 'Float'>
   readonly technical: Prisma.FieldRef<"ChatEvaluation", 'Float'>
   readonly confidence: Prisma.FieldRef<"ChatEvaluation", 'Float'>

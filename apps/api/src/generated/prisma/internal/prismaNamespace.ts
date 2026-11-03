@@ -893,6 +893,11 @@ export type ChatMessageScalarFieldEnum = (typeof ChatMessageScalarFieldEnum)[key
 export const ChatEvaluationScalarFieldEnum = {
   id: 'id',
   sessionId: 'sessionId',
+  language: 'language',
+  rubricVersion: 'rubricVersion',
+  rubricSnapshot: 'rubricSnapshot',
+  dimensionFeedback: 'dimensionFeedback',
+  evaluatedThrough: 'evaluatedThrough',
   communication: 'communication',
   technical: 'technical',
   confidence: 'confidence',
@@ -914,6 +919,14 @@ export const SortOrder = {
 } as const
 
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
+
+
+export const NullableJsonNullValueInput = {
+  DbNull: DbNull,
+  JsonNull: JsonNull
+} as const
+
+export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
 
 
 export const JsonNullValueInput = {

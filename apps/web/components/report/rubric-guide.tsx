@@ -1,35 +1,83 @@
 "use client";
-import { LEGACY_DISPLAY } from "./report-data";
+import { useEffect, useState } from "react";
+import { apiFetch } from "@/lib/api";
+import { normalizeRubric, RUBRIC_VERSION, type Rubric } from "./report-data";
 export type { Rubric } from "./report-data";
-
-// Current backend does not expose /report/rubric or record scoring weights.
-// Explain only the dimensions actually returned; never invent weights.
-export function RubricGuide({ token }: { token: string | null }) {
+export function RubricGuide({
+  token,
+  rubric: supplied,
+}: {
+  token: string | null;
+  rubric?: Rubric;
+}) {
+  const [loaded, setLoaded] = useState<Rubric | null>(null);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    let live = true;
+    if (!token || supplied) return;
+    void apiFetch<unknown>("/report/rubric", { token })
+      .then((value) => {
+        const rubric = normalizeRubric(value);
+        if (!rubric || rubric.version !== RUBRIC_VERSION)
+          throw new Error("ยังโหลดเกณฑ์เต็ม 30 ไม่ได้ กรุณาลองใหม่");
+        if (live) setLoaded(rubric);
+      })
+      .catch(() => {
+        if (live) setError("ยังโหลดเกณฑ์เต็ม 30 ไม่ได้ กรุณาลองใหม่");
+      });
+    return () => {
+      live = false;
+    };
+  }, [token, supplied]);
   if (!token) return null;
+  const rubric = supplied ?? loaded;
   return (
     <details className="rounded-xl border bg-white p-4 text-sm text-black">
       <summary className="cursor-pointer font-semibold">
-        เกณฑ์การประเมิน 0–10 และข้อจำกัด
+        Rubric การวัดคะแนนเต็ม 30 และเกณฑ์เกรด A–F
       </summary>
-      <div className="mt-3 space-y-2">
-        <p>
-          AI ประเมินคะแนนเต็ม 10 ตามประเภทการสัมภาษณ์และคำตอบที่ส่ง
-          คะแนนรวมใช้ค่าที่บันทึกไว้
+      {!rubric ? (
+        <p role="status" className="mt-3">
+          {error || "กำลังโหลดเกณฑ์…"}
         </p>
-        <p>{LEGACY_DISPLAY.gradeScale.description}</p>
-        <ul className="list-disc pl-5">
-          {LEGACY_DISPLAY.dimensions.map((d) => (
-            <li key={d.key}>{d.label}</li>
-          ))}
-        </ul>
-        <p>
-          ผลประเมินนี้ไม่ได้ระบุน้ำหนักหรือเวอร์ชันเกณฑ์ จึงไม่แสดงสัดส่วนคะแนน
-        </p>
-        <p>
-          คะแนนจากข้อความเป็นแนวทางฝึกฝน ไม่ใช่ผลการคัดเลือกเข้าทำงาน
-          และไม่ใช่การประเมินน้ำเสียงหรือบุคลิกภาพ
-        </p>
-      </div>
+      ) : (
+        <div className="mt-4 space-y-4">
+          <p>{rubric.formula}</p>
+          <p>{rubric.gradeScale.description}</p>
+          <p>{rubric.anchors}</p>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] text-left">
+              <thead>
+                <tr>
+                  <th className="p-3">ด้าน / น้ำหนัก</th>
+                  <th className="p-3">สิ่งที่วัด</th>
+                  <th className="p-3">เกณฑ์ระดับคะแนนดิบ / 10</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rubric.dimensions.map((d) => (
+                  <tr key={d.key} className="border-t">
+                    <td className="p-3 font-medium">
+                      {d.label}
+                      <br />
+                      {d.weight * 100}% (สูงสุด 7.5 / 30)
+                    </td>
+                    <td className="p-3">{d.criteria}</td>
+                    <td className="p-3">
+                      <ul className="list-disc space-y-1 pl-5">
+                        {d.levels?.map((level) => (
+                          <li key={level}>{level}</li>
+                        ))}
+                      </ul>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p>{rubric.limitation}</p>
+        </div>
+      )}
     </details>
   );
 }

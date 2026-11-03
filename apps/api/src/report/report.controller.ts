@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 import { renderReportPdf } from './report-pdf';
+import { RUBRIC, RUBRIC_VERSION } from './rubric';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AuthenticatedRequest } from '../common/types/authenticated-request';
 import { ReportService } from './report.service';
@@ -18,6 +19,11 @@ import { ReportService } from './report.service';
 @UseGuards(JwtAuthGuard)
 export class ReportController {
   constructor(private readonly reportService: ReportService) {}
+
+  @Get('rubric')
+  rubric() {
+    return RUBRIC;
+  }
 
   @Get('sessions/:id/pdf')
   async pdf(
@@ -28,6 +34,16 @@ export class ReportController {
     const session = await this.reportService.getSessionReport(req.user.id, id);
     if (!session.evaluation) {
       throw new BadRequestException('กรุณาประเมินคะแนนก่อนดาวน์โหลด PDF');
+    }
+    const e = session.evaluation;
+    if (
+      e.rubricVersion === RUBRIC_VERSION &&
+      session.lastMessageAt &&
+      (!e.evaluatedThrough || e.evaluatedThrough < session.lastMessageAt)
+    ) {
+      throw new BadRequestException(
+        'บทสนทนาเปลี่ยนแล้ว กรุณาประเมินใหม่ก่อนส่งออก PDF',
+      );
     }
     const bytes = await renderReportPdf(session);
     res.setHeader('Content-Type', 'application/pdf');

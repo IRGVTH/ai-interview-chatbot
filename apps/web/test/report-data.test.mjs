@@ -6,6 +6,7 @@ import {
   isEvaluationCurrent,
   gradeFromTotalScore,
   normalizeRubric,
+  applyNewEvaluation,
 } from "../components/report/report-data.ts";
 const reasons = Object.fromEntries(
   ["technical", "communication", "language", "confidence"].map((k) => [
@@ -46,6 +47,35 @@ const input = {
   totalSessions: 1,
   totalMessages: 2,
 };
+test("a persisted evaluation replaces the legacy result immediately and recomputes the average", () => {
+  const before = normalizeOverview({
+    ...input,
+    sessions: [
+      {
+        ...session,
+        evaluation: { ...evaluation, rubricVersion: "thai-interview-v1" },
+      },
+    ],
+  });
+  const after = applyNewEvaluation(before, "s", evaluation);
+  assert.equal(before.sessions[0].evaluation.scoreMax, 10);
+  assert.equal(after.sessions[0].evaluation.displayScore, 24);
+  assert.equal(after.sessions[0].evaluation.scoreMax, 30);
+  assert.equal(after.averageOverall, 24);
+  assert.equal(canDownloadEvaluation(after.sessions[0]), true);
+});
+test("a legacy or incomplete POST response never reports a successful /30 evaluation", () => {
+  const before = normalizeOverview(input);
+  for (const response of [
+    { ...evaluation, rubricVersion: "thai-interview-v1" },
+    { ...evaluation, language: null },
+    { ...evaluation, evaluatedThrough: null },
+    { ...evaluation, dimensionFeedback: {} },
+  ]) {
+    assert.throws(() => applyNewEvaluation(before, "s", response), /เต็ม 30/);
+  }
+  assert.equal(before.sessions[0].evaluation.displayScore, 24);
+});
 test("four scores produce total 24/30, A, and downloadable current report", () => {
   const d = normalizeOverview(input),
     e = d.sessions[0].evaluation;

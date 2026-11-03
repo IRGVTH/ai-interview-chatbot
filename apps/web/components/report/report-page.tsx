@@ -9,6 +9,7 @@ import {
   normalizeOverview,
   isEvaluationCurrent,
   canDownloadEvaluation,
+  applyNewEvaluation,
   type Overview,
 } from "./report-data";
 function message(err: unknown) {
@@ -27,6 +28,11 @@ export function ReportPage() {
     [error, setError] = useState(""),
     [selected, setSelected] = useState(""),
     [busy, setBusy] = useState("");
+  const [scoreNotice, setScoreNotice] = useState<{
+    sessionId: string;
+    failed: boolean;
+    text: string;
+  } | null>(null);
   useEffect(() => {
     let live = true;
     if (!token) {
@@ -56,21 +62,48 @@ export function ReportPage() {
     };
   }, [token, router]);
   async function score(id: string) {
-    if (!token || busy) return;
+    if (!token || busy || !data) return;
     setBusy(id);
     setError("");
+    setScoreNotice(null);
     try {
-      await apiFetch(`/report/sessions/${id}/evaluate`, {
-        method: "POST",
-        token,
-      });
-      setData(
-        normalizeOverview(
-          await apiFetch<unknown>("/report/overview", { token }),
-        ),
+      const response = await apiFetch<unknown>(
+        `/report/sessions/${id}/evaluate`,
+        {
+          method: "POST",
+          token,
+        },
       );
+      // The POST returns the persisted evaluation. Apply that result directly,
+      // so a failed second GET cannot hide a successfully saved /30 result.
+      const updated = applyNewEvaluation(data, id, response);
+      setData(updated);
+      const evaluation = updated.sessions.find((s) => s.id === id)!.evaluation!;
+      setScoreNotice({
+        sessionId: id,
+        failed: false,
+        text: `บันทึกผลประเมินใหม่แล้ว ${evaluation.totalScore} / 30 คะแนน`,
+      });
+      try {
+        // Refresh conversation timestamps too, in case chat changed during AI scoring.
+        setData(
+          normalizeOverview(
+            await apiFetch<unknown>("/report/overview", { token }),
+          ),
+        );
+      } catch {
+        setScoreNotice({
+          sessionId: id,
+          failed: true,
+          text: `บันทึกผลประเมินใหม่แล้ว ${evaluation.totalScore} / 30 คะแนน แต่โหลดภาพรวมล่าสุดไม่สำเร็จ กรุณารีเฟรชหน้าเพื่อตรวจสถานะบทสนทนาล่าสุด`,
+        });
+      }
     } catch (err) {
-      setError(message(err));
+      setScoreNotice({
+        sessionId: id,
+        failed: true,
+        text: `ประเมินคะแนนเต็ม 30 ไม่สำเร็จ: ${message(err)} ผลที่แสดงด้านล่างยังเป็นผลเดิม กรุณาลองประเมินใหม่อีกครั้ง`,
+      });
     } finally {
       setBusy("");
     }
@@ -243,16 +276,28 @@ export function ReportPage() {
                     : "ดาวน์โหลด PDF"}
                 </button>
               </div>
+              {busy === session.id && (
+                <p role="status" className="rounded-xl bg-blue-50 p-4">
+                  กำลังขอผลประเมินใหม่จาก AI
+                  คะแนนด้านล่างยังเป็นผลเดิมจนกว่าจะบันทึกสำเร็จ
+                </p>
+              )}
+              {scoreNotice?.sessionId === session.id && (
+                <p
+                  role={scoreNotice.failed ? "alert" : "status"}
+                  className={`rounded-xl p-4 ${scoreNotice.failed ? "bg-red-50 text-red-700" : "bg-green-50 text-green-800"}`}
+                >
+                  {scoreNotice.text}
+                </p>
+              )}
               {!e ? (
                 <p>กรุณาประเมินเพื่อดูคะแนนและเหตุผลรายด้าน</p>
               ) : (
                 <>
                   {e.totalScore === null ? (
                     <p role="status" className="rounded-xl bg-amber-50 p-4">
-                      นี่คือผลเดิมเต็ม 10
-                      ยังไม่มีคะแนนภาษาและเหตุผลครบตามเกณฑ์ใหม่
-                      กรุณากดประเมินใหม่ ผลเก่าจะไม่ถูกแปลงเป็นเต็ม 30
-                      โดยอัตโนมัติ
+                      นี่คือผลประเมินเกณฑ์เดิมเต็ม 10 ยังไม่ใช่ผลจากเกณฑ์เต็ม 30
+                      การประเมินใหม่ที่สำเร็จจะแทนที่ผลนี้ด้วยคะแนนเต็ม 30
                     </p>
                   ) : (
                     !isEvaluationCurrent(session) && (

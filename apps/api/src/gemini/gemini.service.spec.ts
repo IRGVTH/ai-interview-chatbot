@@ -6,7 +6,10 @@ const generateContent = jest.fn<
   Promise<{ text: string }>,
   [{ model: string; contents: string }]
 >();
-const generateContentStream = jest.fn();
+const generateContentStream = jest.fn<
+  Promise<AsyncIterable<{ text: string }>>,
+  [{ model: string; contents: string }]
+>();
 jest.mock('@google/genai', () => ({
   GoogleGenAI: jest.fn().mockImplementation(() => ({
     models: { generateContent, generateContentStream },
@@ -92,7 +95,7 @@ describe('GeminiService provider failures', () => {
       .mockRejectedValueOnce({ status: 404 })
       .mockResolvedValueOnce(chunks);
     const result = await service().stream('Start');
-    expect(result.model).toBe('gemini-3.8-flash');
+    expect(result.model).toBe('gemini-3.5-flash-lite');
     expect(result.stream).toBe(chunks);
   });
 
@@ -101,6 +104,51 @@ describe('GeminiService provider failures', () => {
     await expect(service().ask('Start')).rejects.toMatchObject({
       response: { code: 'GEMINI_MODEL_UNAVAILABLE' },
     });
-    expect(generateContent).toHaveBeenCalledTimes(2);
+    expect(generateContent).toHaveBeenCalledTimes(3);
+  });
+
+  it.each(['ask', 'stream'] as const)(
+    '%s switches away from an overloaded primary before retrying it',
+    async (method) => {
+      const chunks = (async function* () {
+        yield await Promise.resolve({ text: 'Hello' });
+      })();
+      generateContent
+        .mockRejectedValueOnce({ status: 503 })
+        .mockResolvedValueOnce({ text: 'Evaluation JSON' });
+      generateContentStream
+        .mockRejectedValueOnce({ status: 503 })
+        .mockResolvedValueOnce(chunks);
+      const result = await service()[method]('Evaluate');
+      expect(result.model).toBe('gemini-3.5-flash-lite');
+      const calls = method === 'ask' ? generateContent : generateContentStream;
+      expect(calls.mock.calls.map(([request]) => request.model)).toEqual([
+        'gemini-3.1-flash-lite',
+        'gemini-3.5-flash-lite',
+      ]);
+    },
+  );
+
+  it('still retries the final overloaded model and returns an unavailable error', async () => {
+    jest.useFakeTimers();
+    try {
+      generateContent.mockRejectedValue({ status: 503 });
+      const pending = expect(service().ask('Evaluate')).rejects.toMatchObject({
+        response: { code: 'GEMINI_UNAVAILABLE' },
+      });
+      await jest.runAllTimersAsync();
+      await pending;
+      expect(
+        generateContent.mock.calls.map(([request]) => request.model),
+      ).toEqual([
+        'gemini-3.1-flash-lite',
+        'gemini-3.5-flash-lite',
+        'gemini-3.8-flash',
+        'gemini-3.8-flash',
+        'gemini-3.8-flash',
+      ]);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });

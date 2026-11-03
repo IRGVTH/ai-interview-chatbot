@@ -2,6 +2,7 @@ import { ReportService } from './report.service';
 import { PrismaService } from '../database/prisma.service';
 import { GeminiService } from '../gemini/gemini.service';
 import { RUBRIC_VERSION } from './rubric';
+import { ServiceUnavailableException } from '@nestjs/common';
 const at = new Date('2026-11-03T05:00:00Z');
 const session = {
   id: 's',
@@ -87,5 +88,15 @@ describe('Report scoring persistence', () => {
     findFirst.mockResolvedValue({ ...session, messages: [] });
     await expect(service.evaluateSession('u', 's')).rejects.toThrow();
     expect(ask).not.toHaveBeenCalled();
+  });
+  it('keeps the saved legacy score when every Gemini model is unavailable', async () => {
+    const { service, ask, upsert } = setup(JSON.stringify(valid));
+    const unavailable = new ServiceUnavailableException({
+      code: 'GEMINI_UNAVAILABLE',
+      message: 'บริการ AI ไม่พร้อมใช้งานชั่วคราว',
+    });
+    ask.mockRejectedValueOnce(unavailable);
+    await expect(service.evaluateSession('u', 's')).rejects.toBe(unavailable);
+    expect(upsert).not.toHaveBeenCalled();
   });
 });

@@ -256,6 +256,29 @@ export function canDownloadEvaluation(s: Session) {
     ? true
     : isEvaluationCurrent(s);
 }
+export function applyNewEvaluation(
+  overview: Overview,
+  sessionId: string,
+  response: unknown,
+): Overview {
+  const evaluation = normalizeEvaluation(response, sessionId);
+  if (
+    !overview.sessions.some((s) => s.id === sessionId) ||
+    !evaluation ||
+    evaluation.totalScore === null ||
+    !evaluation.evaluatedThrough
+  ) {
+    throw new Error(
+      "API ยังไม่ได้ส่งผลประเมินเกณฑ์เต็ม 30 ที่สมบูรณ์ กรุณาลองใหม่หรือตรวจเวอร์ชัน Backend",
+    );
+  }
+  return normalizeOverview({
+    ...overview,
+    sessions: overview.sessions.map((s) =>
+      s.id === sessionId ? { ...s, evaluation } : s,
+    ),
+  });
+}
 export function normalizeOverview(v: unknown): Overview {
   const r = object(v);
   if (!r || !Array.isArray(r.sessions))

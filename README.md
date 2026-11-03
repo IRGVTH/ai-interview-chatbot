@@ -60,12 +60,17 @@ FRONTEND_URL="http://localhost:3000"
 PORT=4000
 GEMINI_API_KEY="your-gemini-api-key"
 GEMINI_MODEL="gemini-3.1-flash-lite"
-GEMINI_FALLBACK_MODELS="gemini-3.8-flash"
+GEMINI_FALLBACK_MODELS="gemini-3.5-flash-lite,gemini-3.8-flash"
 ```
 
 `GEMINI_MODEL` and `GEMINI_FALLBACK_MODELS` are optional server-side settings.
 The fallback setting accepts comma-separated model IDs; an empty value disables
 fallbacks. Choose models available to the API key's Google AI project.
+When a model responds with 503, the API tries the next configured model immediately;
+the last model retains bounded retries with exponential backoff. If every model
+fails, Reports keeps the previous evaluation and displays the failure beside the
+evaluation button. Only a successful four-dimension evaluation replaces a /10
+result with a /30 result.
 Restart/redeploy the **API service** after changing these values (a Vercel frontend
 redeploy alone does not update the backend).
 

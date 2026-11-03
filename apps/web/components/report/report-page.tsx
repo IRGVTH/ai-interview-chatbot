@@ -8,6 +8,7 @@ import { fetchReportPdf, saveReportPdf } from "@/lib/report-pdf";
 type Interview = {
   id: string;
   title: string;
+  interviewType?: string | null;
   position: string;
   experienceLevel: string;
   difficulty: string;
@@ -48,6 +49,7 @@ type ChatSession = {
   interview: {
     id: string;
     title: string;
+    interviewType?: string | null;
     position: string;
     experienceLevel: string;
     difficulty: string;
@@ -249,6 +251,8 @@ export function ReportPage() {
                           {session.title || "Practice Chat"}
                         </h3>
                         <p className="mt-1 text-sm text-black md:text-gray-500">
+                          ประเภท:{" "}
+                          {session.interview.interviewType || "ไม่ได้ระบุ"} •{" "}
                           {session.interview.position} •{" "}
                           {session.interview.difficulty}
                         </p>

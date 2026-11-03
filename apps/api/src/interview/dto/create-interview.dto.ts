@@ -1,6 +1,10 @@
 import { IsIn, IsOptional, IsString, MinLength } from 'class-validator';
 
 export class CreateInterviewDto {
+  @IsOptional()
+  @IsIn(['HR', 'Technical', 'Coding', 'Behavioral'])
+  interviewType?: string;
+
   @IsString()
   @MinLength(2)
   title!: string;

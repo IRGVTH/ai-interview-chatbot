@@ -7,6 +7,7 @@ import { apiFetch } from "@/lib/api";
 type Interview = {
   id: string;
   title: string;
+  interviewType?: string | null;
   position: string;
   experienceLevel: string;
   difficulty: string;
@@ -18,6 +19,7 @@ type Interview = {
 };
 
 type CreateInterviewForm = {
+  interviewType: string;
   title: string;
   position: string;
   experienceLevel: string;
@@ -86,6 +88,7 @@ export function InterviewPage() {
   const [resumeName, setResumeName] = useState("");
 
   const [form, setForm] = useState<CreateInterviewForm>({
+    interviewType: "HR",
     title: "",
     position: "Frontend Developer",
     experienceLevel: "0-1",
@@ -152,6 +155,7 @@ export function InterviewPage() {
       setInterviews((prev) => [created, ...prev]);
       setSelectedInterviewId(created.id);
       setForm({
+        interviewType: "HR",
         title: "",
         position: "Frontend Developer",
         experienceLevel: "0-1",
@@ -327,6 +331,20 @@ export function InterviewPage() {
                 }))}
               />
 
+              <SelectField
+                label="ประเภทการสัมภาษณ์ / Interview type"
+                value={form.interviewType}
+                onChange={(value) => setForm({ ...form, interviewType: value })}
+                options={[
+                  { label: "HR / ฝ่ายบุคคล", value: "HR" },
+                  { label: "Technical / ความรู้เฉพาะทาง", value: "Technical" },
+                  { label: "Coding / เขียนโปรแกรม", value: "Coding" },
+                  {
+                    label: "Behavioral / พฤติกรรมและประสบการณ์",
+                    value: "Behavioral",
+                  },
+                ]}
+              />
               <div className="grid gap-4 md:grid-cols-2">
                 <SelectField
                   label="Experience"
@@ -472,6 +490,7 @@ export function InterviewPage() {
                             {interview.title}
                           </h3>
                           <p className="mt-1 text-sm text-black md:text-gray-500">
+                            ประเภท: {interview.interviewType || "ไม่ได้ระบุ"} •{" "}
                             {interview.position} • {interview.experienceLevel} •{" "}
                             {interview.difficulty}
                           </p>

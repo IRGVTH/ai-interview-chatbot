@@ -26,6 +26,7 @@ export type AggregateInterview = {
 export type InterviewMinAggregateOutputType = {
   id: string | null
   title: string | null
+  interviewType: string | null
   position: string | null
   experienceLevel: string | null
   difficulty: string | null
@@ -44,6 +45,7 @@ export type InterviewMinAggregateOutputType = {
 export type InterviewMaxAggregateOutputType = {
   id: string | null
   title: string | null
+  interviewType: string | null
   position: string | null
   experienceLevel: string | null
   difficulty: string | null
@@ -62,6 +64,7 @@ export type InterviewMaxAggregateOutputType = {
 export type InterviewCountAggregateOutputType = {
   id: number
   title: number
+  interviewType: number
   position: number
   experienceLevel: number
   difficulty: number
@@ -82,6 +85,7 @@ export type InterviewCountAggregateOutputType = {
 export type InterviewMinAggregateInputType = {
   id?: true
   title?: true
+  interviewType?: true
   position?: true
   experienceLevel?: true
   difficulty?: true
@@ -100,6 +104,7 @@ export type InterviewMinAggregateInputType = {
 export type InterviewMaxAggregateInputType = {
   id?: true
   title?: true
+  interviewType?: true
   position?: true
   experienceLevel?: true
   difficulty?: true
@@ -118,6 +123,7 @@ export type InterviewMaxAggregateInputType = {
 export type InterviewCountAggregateInputType = {
   id?: true
   title?: true
+  interviewType?: true
   position?: true
   experienceLevel?: true
   difficulty?: true
@@ -209,6 +215,7 @@ export type InterviewGroupByArgs<ExtArgs extends runtime.Types.Extensions.Intern
 export type InterviewGroupByOutputType = {
   id: string
   title: string
+  interviewType: string | null
   position: string
   experienceLevel: string
   difficulty: string
@@ -248,6 +255,7 @@ export type InterviewWhereInput = {
   NOT?: Prisma.InterviewWhereInput | Prisma.InterviewWhereInput[]
   id?: Prisma.StringFilter<"Interview"> | string
   title?: Prisma.StringFilter<"Interview"> | string
+  interviewType?: Prisma.StringNullableFilter<"Interview"> | string | null
   position?: Prisma.StringFilter<"Interview"> | string
   experienceLevel?: Prisma.StringFilter<"Interview"> | string
   difficulty?: Prisma.StringFilter<"Interview"> | string
@@ -268,6 +276,7 @@ export type InterviewWhereInput = {
 export type InterviewOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   title?: Prisma.SortOrder
+  interviewType?: Prisma.SortOrderInput | Prisma.SortOrder
   position?: Prisma.SortOrder
   experienceLevel?: Prisma.SortOrder
   difficulty?: Prisma.SortOrder
@@ -291,6 +300,7 @@ export type InterviewWhereUniqueInput = Prisma.AtLeast<{
   OR?: Prisma.InterviewWhereInput[]
   NOT?: Prisma.InterviewWhereInput | Prisma.InterviewWhereInput[]
   title?: Prisma.StringFilter<"Interview"> | string
+  interviewType?: Prisma.StringNullableFilter<"Interview"> | string | null
   position?: Prisma.StringFilter<"Interview"> | string
   experienceLevel?: Prisma.StringFilter<"Interview"> | string
   difficulty?: Prisma.StringFilter<"Interview"> | string
@@ -311,6 +321,7 @@ export type InterviewWhereUniqueInput = Prisma.AtLeast<{
 export type InterviewOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   title?: Prisma.SortOrder
+  interviewType?: Prisma.SortOrderInput | Prisma.SortOrder
   position?: Prisma.SortOrder
   experienceLevel?: Prisma.SortOrder
   difficulty?: Prisma.SortOrder
@@ -335,6 +346,7 @@ export type InterviewScalarWhereWithAggregatesInput = {
   NOT?: Prisma.InterviewScalarWhereWithAggregatesInput | Prisma.InterviewScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"Interview"> | string
   title?: Prisma.StringWithAggregatesFilter<"Interview"> | string
+  interviewType?: Prisma.StringNullableWithAggregatesFilter<"Interview"> | string | null
   position?: Prisma.StringWithAggregatesFilter<"Interview"> | string
   experienceLevel?: Prisma.StringWithAggregatesFilter<"Interview"> | string
   difficulty?: Prisma.StringWithAggregatesFilter<"Interview"> | string
@@ -353,6 +365,7 @@ export type InterviewScalarWhereWithAggregatesInput = {
 export type InterviewCreateInput = {
   id?: string
   title: string
+  interviewType?: string | null
   position: string
   experienceLevel: string
   difficulty: string
@@ -372,6 +385,7 @@ export type InterviewCreateInput = {
 export type InterviewUncheckedCreateInput = {
   id?: string
   title: string
+  interviewType?: string | null
   position: string
   experienceLevel: string
   difficulty: string
@@ -391,6 +405,7 @@ export type InterviewUncheckedCreateInput = {
 export type InterviewUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
+  interviewType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   position?: Prisma.StringFieldUpdateOperationsInput | string
   experienceLevel?: Prisma.StringFieldUpdateOperationsInput | string
   difficulty?: Prisma.StringFieldUpdateOperationsInput | string
@@ -410,6 +425,7 @@ export type InterviewUpdateInput = {
 export type InterviewUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
+  interviewType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   position?: Prisma.StringFieldUpdateOperationsInput | string
   experienceLevel?: Prisma.StringFieldUpdateOperationsInput | string
   difficulty?: Prisma.StringFieldUpdateOperationsInput | string
@@ -429,6 +445,7 @@ export type InterviewUncheckedUpdateInput = {
 export type InterviewCreateManyInput = {
   id?: string
   title: string
+  interviewType?: string | null
   position: string
   experienceLevel: string
   difficulty: string
@@ -447,6 +464,7 @@ export type InterviewCreateManyInput = {
 export type InterviewUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
+  interviewType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   position?: Prisma.StringFieldUpdateOperationsInput | string
   experienceLevel?: Prisma.StringFieldUpdateOperationsInput | string
   difficulty?: Prisma.StringFieldUpdateOperationsInput | string
@@ -464,6 +482,7 @@ export type InterviewUpdateManyMutationInput = {
 export type InterviewUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
+  interviewType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   position?: Prisma.StringFieldUpdateOperationsInput | string
   experienceLevel?: Prisma.StringFieldUpdateOperationsInput | string
   difficulty?: Prisma.StringFieldUpdateOperationsInput | string
@@ -492,6 +511,7 @@ export type InterviewOrderByRelationAggregateInput = {
 export type InterviewCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   title?: Prisma.SortOrder
+  interviewType?: Prisma.SortOrder
   position?: Prisma.SortOrder
   experienceLevel?: Prisma.SortOrder
   difficulty?: Prisma.SortOrder
@@ -510,6 +530,7 @@ export type InterviewCountOrderByAggregateInput = {
 export type InterviewMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   title?: Prisma.SortOrder
+  interviewType?: Prisma.SortOrder
   position?: Prisma.SortOrder
   experienceLevel?: Prisma.SortOrder
   difficulty?: Prisma.SortOrder
@@ -528,6 +549,7 @@ export type InterviewMaxOrderByAggregateInput = {
 export type InterviewMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   title?: Prisma.SortOrder
+  interviewType?: Prisma.SortOrder
   position?: Prisma.SortOrder
   experienceLevel?: Prisma.SortOrder
   difficulty?: Prisma.SortOrder
@@ -611,6 +633,7 @@ export type InterviewUpdateOneRequiredWithoutChatSessionsNestedInput = {
 export type InterviewCreateWithoutUserInput = {
   id?: string
   title: string
+  interviewType?: string | null
   position: string
   experienceLevel: string
   difficulty: string
@@ -629,6 +652,7 @@ export type InterviewCreateWithoutUserInput = {
 export type InterviewUncheckedCreateWithoutUserInput = {
   id?: string
   title: string
+  interviewType?: string | null
   position: string
   experienceLevel: string
   difficulty: string
@@ -676,6 +700,7 @@ export type InterviewScalarWhereInput = {
   NOT?: Prisma.InterviewScalarWhereInput | Prisma.InterviewScalarWhereInput[]
   id?: Prisma.StringFilter<"Interview"> | string
   title?: Prisma.StringFilter<"Interview"> | string
+  interviewType?: Prisma.StringNullableFilter<"Interview"> | string | null
   position?: Prisma.StringFilter<"Interview"> | string
   experienceLevel?: Prisma.StringFilter<"Interview"> | string
   difficulty?: Prisma.StringFilter<"Interview"> | string
@@ -694,6 +719,7 @@ export type InterviewScalarWhereInput = {
 export type InterviewCreateWithoutChatSessionsInput = {
   id?: string
   title: string
+  interviewType?: string | null
   position: string
   experienceLevel: string
   difficulty: string
@@ -712,6 +738,7 @@ export type InterviewCreateWithoutChatSessionsInput = {
 export type InterviewUncheckedCreateWithoutChatSessionsInput = {
   id?: string
   title: string
+  interviewType?: string | null
   position: string
   experienceLevel: string
   difficulty: string
@@ -746,6 +773,7 @@ export type InterviewUpdateToOneWithWhereWithoutChatSessionsInput = {
 export type InterviewUpdateWithoutChatSessionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
+  interviewType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   position?: Prisma.StringFieldUpdateOperationsInput | string
   experienceLevel?: Prisma.StringFieldUpdateOperationsInput | string
   difficulty?: Prisma.StringFieldUpdateOperationsInput | string
@@ -764,6 +792,7 @@ export type InterviewUpdateWithoutChatSessionsInput = {
 export type InterviewUncheckedUpdateWithoutChatSessionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
+  interviewType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   position?: Prisma.StringFieldUpdateOperationsInput | string
   experienceLevel?: Prisma.StringFieldUpdateOperationsInput | string
   difficulty?: Prisma.StringFieldUpdateOperationsInput | string
@@ -782,6 +811,7 @@ export type InterviewUncheckedUpdateWithoutChatSessionsInput = {
 export type InterviewCreateManyUserInput = {
   id?: string
   title: string
+  interviewType?: string | null
   position: string
   experienceLevel: string
   difficulty: string
@@ -799,6 +829,7 @@ export type InterviewCreateManyUserInput = {
 export type InterviewUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
+  interviewType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   position?: Prisma.StringFieldUpdateOperationsInput | string
   experienceLevel?: Prisma.StringFieldUpdateOperationsInput | string
   difficulty?: Prisma.StringFieldUpdateOperationsInput | string
@@ -817,6 +848,7 @@ export type InterviewUpdateWithoutUserInput = {
 export type InterviewUncheckedUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
+  interviewType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   position?: Prisma.StringFieldUpdateOperationsInput | string
   experienceLevel?: Prisma.StringFieldUpdateOperationsInput | string
   difficulty?: Prisma.StringFieldUpdateOperationsInput | string
@@ -835,6 +867,7 @@ export type InterviewUncheckedUpdateWithoutUserInput = {
 export type InterviewUncheckedUpdateManyWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
+  interviewType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   position?: Prisma.StringFieldUpdateOperationsInput | string
   experienceLevel?: Prisma.StringFieldUpdateOperationsInput | string
   difficulty?: Prisma.StringFieldUpdateOperationsInput | string
@@ -883,6 +916,7 @@ export type InterviewCountOutputTypeCountChatSessionsArgs<ExtArgs extends runtim
 export type InterviewSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   title?: boolean
+  interviewType?: boolean
   position?: boolean
   experienceLevel?: boolean
   difficulty?: boolean
@@ -904,6 +938,7 @@ export type InterviewSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
 export type InterviewSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   title?: boolean
+  interviewType?: boolean
   position?: boolean
   experienceLevel?: boolean
   difficulty?: boolean
@@ -923,6 +958,7 @@ export type InterviewSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ext
 export type InterviewSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   title?: boolean
+  interviewType?: boolean
   position?: boolean
   experienceLevel?: boolean
   difficulty?: boolean
@@ -942,6 +978,7 @@ export type InterviewSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ext
 export type InterviewSelectScalar = {
   id?: boolean
   title?: boolean
+  interviewType?: boolean
   position?: boolean
   experienceLevel?: boolean
   difficulty?: boolean
@@ -957,7 +994,7 @@ export type InterviewSelectScalar = {
   userId?: boolean
 }
 
-export type InterviewOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "title" | "position" | "experienceLevel" | "difficulty" | "status" | "summary" | "startedAt" | "finishedAt" | "resumeFileName" | "resumeText" | "resumeUploadedAt" | "createdAt" | "updatedAt" | "userId", ExtArgs["result"]["interview"]>
+export type InterviewOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "title" | "interviewType" | "position" | "experienceLevel" | "difficulty" | "status" | "summary" | "startedAt" | "finishedAt" | "resumeFileName" | "resumeText" | "resumeUploadedAt" | "createdAt" | "updatedAt" | "userId", ExtArgs["result"]["interview"]>
 export type InterviewInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   chatSessions?: boolean | Prisma.Interview$chatSessionsArgs<ExtArgs>
@@ -979,6 +1016,7 @@ export type $InterviewPayload<ExtArgs extends runtime.Types.Extensions.InternalA
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     title: string
+    interviewType: string | null
     position: string
     experienceLevel: string
     difficulty: string
@@ -1419,6 +1457,7 @@ export interface Prisma__InterviewClient<T, Null = never, ExtArgs extends runtim
 export interface InterviewFieldRefs {
   readonly id: Prisma.FieldRef<"Interview", 'String'>
   readonly title: Prisma.FieldRef<"Interview", 'String'>
+  readonly interviewType: Prisma.FieldRef<"Interview", 'String'>
   readonly position: Prisma.FieldRef<"Interview", 'String'>
   readonly experienceLevel: Prisma.FieldRef<"Interview", 'String'>
   readonly difficulty: Prisma.FieldRef<"Interview", 'String'>

@@ -6,6 +6,7 @@ import { UpdateInterviewDto } from './dto/update-interview.dto';
 type InterviewRecord = {
   id: string;
   title: string;
+  interviewType: string | null;
   position: string;
   experienceLevel: string;
   difficulty: string;
@@ -41,6 +42,7 @@ export class InterviewService {
       data: {
         title: this.cleanText(dto.title) ?? dto.title,
         position: this.cleanText(dto.position) ?? dto.position,
+        interviewType: dto.interviewType,
         experienceLevel: dto.experienceLevel,
         difficulty: dto.difficulty,
         summary: this.cleanText(dto.summary) ?? null,
@@ -98,6 +100,9 @@ export class InterviewService {
         }),
         ...(dto.position !== undefined && {
           position: this.cleanText(dto.position) ?? dto.position,
+        }),
+        ...(dto.interviewType !== undefined && {
+          interviewType: dto.interviewType,
         }),
         ...(dto.experienceLevel !== undefined && {
           experienceLevel: dto.experienceLevel,

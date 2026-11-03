@@ -23,6 +23,7 @@ type ChatSession = {
   interview: {
     id: string;
     title: string;
+    interviewType?: string | null;
     position: string;
     experienceLevel: string;
     difficulty: string;
@@ -41,6 +42,7 @@ type SessionListItem = {
   interview: {
     id: string;
     title: string;
+    interviewType?: string | null;
     position: string;
     experienceLevel: string;
     difficulty: string;
@@ -667,6 +669,8 @@ export function ChatPage({ initialSessionId }: ChatPageProps) {
                       "Chat"}
                   </h2>
                   <p className="text-sm text-black md:text-gray-500">
+                    ประเภท:{" "}
+                    {activeSession?.interview.interviewType || "ไม่ได้ระบุ"} •{" "}
                     {activeSession?.interview.position} •{" "}
                     {activeSession?.interview.experienceLevel} •{" "}
                     {activeSession?.interview.difficulty}

@@ -27,6 +27,7 @@ model User {
 model Interview {
   id               String   @id @default(cuid())
   title            String
+  interviewType    String?
   position         String
   experienceLevel  String
   difficulty       String

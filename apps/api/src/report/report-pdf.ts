@@ -6,6 +6,7 @@ export type PdfReport = {
   title: string | null;
   interview: {
     title: string;
+    interviewType?: string | null;
     position: string;
     experienceLevel: string;
     difficulty: string;
@@ -51,6 +52,9 @@ export async function renderReportPdf(session: PdfReport): Promise<Buffer> {
     text('รายงานผลการฝึกสัมภาษณ์', 21);
     text('AI Interview Chatbot', 13);
     text(session.interview.title, 16);
+    text(
+      `ประเภทการสัมภาษณ์: ${session.interview.interviewType || 'ไม่ได้ระบุ (ข้อมูลเดิม)'}`,
+    );
     text(`รอบฝึก: ${session.title || 'Practice Chat'}\nรหัสรอบ: ${session.id}`);
     text(
       `ตำแหน่ง: ${session.interview.position}\nประสบการณ์: ${session.interview.experienceLevel}\nความยาก: ${session.interview.difficulty}`,

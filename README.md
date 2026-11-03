@@ -155,3 +155,19 @@ Deploy the Next.js app to Vercel.
 ## License
 
 This project is for educational and portfolio use.
+
+
+### Interview type deployment
+
+The interview type flow adds the nullable `Interview.interviewType` column.
+Before starting the updated API, run against the production database:
+
+```bash
+pnpm --filter @ai-interview/database exec prisma migrate deploy
+```
+
+The migration preserves existing values if the column was already added by the SRS
+branch. Historical records with no saved type show "ไม่ได้ระบุ"; the original type
+cannot be recovered from past selections. New interviews send one of HR, Technical,
+Coding, or Behavioral. The API persists the selected type and uses it for both AI
+chat and report evaluation. Deploy frontend and backend from the same revision.

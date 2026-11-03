@@ -1,3 +1,4 @@
+import { interviewTypeContext } from '../interview/interview-type';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { GeminiService } from '../gemini/gemini.service';
@@ -10,6 +11,7 @@ type ChatMessageItem = {
 type InterviewSummary = {
   id: string;
   title: string;
+  interviewType: string | null;
   position: string;
   experienceLevel: string;
   difficulty: string;
@@ -174,6 +176,8 @@ You are an interview evaluator for a university portfolio project.
 
 Evaluate the candidate's performance based on the full conversation.
 
+${interviewTypeContext(session.interview.interviewType)}
+Evaluate against this interview type; do not penalize missing coding in an HR or Behavioral interview.
 Position: ${session.interview.position}
 Experience level: ${session.interview.experienceLevel}
 Difficulty: ${session.interview.difficulty}

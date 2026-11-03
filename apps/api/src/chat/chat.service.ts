@@ -1,3 +1,4 @@
+import { interviewTypeContext } from '../interview/interview-type';
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Response } from 'express';
 import { PrismaService } from '../database/prisma.service';
@@ -8,6 +9,7 @@ import { SendMessageDto } from './dto/send-message.dto';
 type InterviewSummary = {
   id: string;
   title: string;
+  interviewType: string | null;
   position: string;
   experienceLevel: string;
   difficulty: string;
@@ -51,22 +53,6 @@ type ChatSessionDetail = {
   lastMessageAt: Date | null;
   interview: InterviewSummary;
   messages: ChatMessageRow[];
-};
-
-type GeminiStreamChunk = {
-  text?: string;
-};
-
-type GeminiStreamResult = {
-  stream: AsyncIterable<GeminiStreamChunk>;
-  model: string;
-  attempts: number;
-};
-
-type GeminiAskResult = {
-  text: string;
-  model: string;
-  attempts: number;
 };
 
 @Injectable()
@@ -181,6 +167,7 @@ export class ChatService {
 
     const prompt = this.buildPrompt({
       title: session.title ?? 'Interview Chat',
+      interviewType: session.interview.interviewType,
       position: session.interview.position,
       experienceLevel: session.interview.experienceLevel,
       difficulty: session.interview.difficulty,
@@ -191,9 +178,7 @@ export class ChatService {
       currentUserMessage: dto.content,
     });
 
-    const geminiResponse = (await this.geminiService.ask(
-      prompt,
-    )) as GeminiAskResult;
+    const geminiResponse = await this.geminiService.ask(prompt);
 
     const assistantMessage = (await this.prisma.chatMessage.create({
       data: {
@@ -247,6 +232,7 @@ export class ChatService {
 
     const prompt = this.buildPrompt({
       title: session.title ?? 'Interview Chat',
+      interviewType: session.interview.interviewType,
       position: session.interview.position,
       experienceLevel: session.interview.experienceLevel,
       difficulty: session.interview.difficulty,
@@ -257,9 +243,7 @@ export class ChatService {
       currentUserMessage: dto.content,
     });
 
-    const gemini = (await this.geminiService.stream(
-      prompt,
-    )) as GeminiStreamResult;
+    const gemini = await this.geminiService.stream(prompt);
     let assistantText = '';
 
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
@@ -317,6 +301,7 @@ export class ChatService {
   }
 
   private buildPrompt(input: {
+    interviewType?: string | null;
     title: string;
     position: string;
     experienceLevel: string;
@@ -330,6 +315,7 @@ export class ChatService {
     return `
 You are an AI interviewer for a university portfolio project.
 
+${interviewTypeContext(input.interviewType)}
 Interview title: ${input.title}
 Position: ${input.position}
 Experience level: ${input.experienceLevel}

@@ -845,6 +845,7 @@ export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof User
 export const InterviewScalarFieldEnum = {
   id: 'id',
   title: 'title',
+  interviewType: 'interviewType',
   position: 'position',
   experienceLevel: 'experienceLevel',
   difficulty: 'difficulty',

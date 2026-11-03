@@ -171,3 +171,20 @@ branch. Historical records with no saved type show "ไม่ได้ระบ�
 cannot be recovered from past selections. New interviews send one of HR, Technical,
 Coding, or Behavioral. The API persists the selected type and uses it for both AI
 chat and report evaluation. Deploy frontend and backend from the same revision.
+
+
+### Report rubric / 30-point scoring
+
+Before deploying this version of the API, apply migrations:
+
+```bash
+pnpm --filter @ai-interview/database exec prisma migrate deploy
+```
+
+The report-rubric migration adds nullable language/reason/snapshot/source timestamp
+fields and preserves existing SRS columns if present. Historical scores are not
+rewritten. Re-score to produce interview-30-v1 evaluations with all four reasons.
+Each dimension is 0–10, weighted 25%; total = sum(dimensions) * 0.75 (max 30).
+The existing overall database field remains the four-dimension mean on 0–10 for
+compatibility; the API computes totalScore and grade. Only current 30-point
+results contribute to the new average. Deploy API and web together.

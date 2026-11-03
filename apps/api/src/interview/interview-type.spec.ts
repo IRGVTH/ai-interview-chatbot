@@ -71,7 +71,13 @@ describe('Interview type persistence and AI flow', () => {
       const session = {
         id: 's1',
         title: 'Practice',
-        messages: [],
+        messages: [
+          {
+            role: 'user',
+            content: 'ผมวิเคราะห์ปัญหาตามขั้นตอนและทดสอบผล',
+            createdAt: new Date('2026-11-03T05:00:00Z'),
+          },
+        ],
         memory: null,
         interview: { ...form, interviewType },
       };
@@ -96,12 +102,19 @@ describe('Interview type persistence and AI flow', () => {
         >()
         .mockResolvedValue({
           text: JSON.stringify({
+            language: 8,
+            dimensionFeedback: {
+              technical: 'ตอบได้ตรงประเด็นแต่ยังขาดตัวอย่าง',
+              communication: 'อธิบายได้ชัดเจนแต่ยังไม่กระชับ',
+              language: 'ใช้ภาษาสุภาพและเหมาะสมกับงาน',
+              confidence: 'แสดงเหตุผลและบทบาทของตนได้ชัดเจน',
+            },
             communication: 8,
             technical: 8,
             confidence: 8,
             overall: 8,
-            strengths: [],
-            improvements: [],
+            strengths: ['ตอบตรงคำถาม'],
+            improvements: ['เพิ่มตัวอย่าง'],
             feedback: 'Good',
           }),
           model: 'test',

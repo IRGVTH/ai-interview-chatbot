@@ -94,4 +94,19 @@ describe('Report PDF endpoint', () => {
       .set('Authorization', 'Bearer test-user')
       .expect(404);
   });
+  it('blocks PDF when a new answer arrived after the captured scoring snapshot', async () => {
+    getSessionReport.mockResolvedValue({
+      ...sample,
+      lastMessageAt: new Date('2026-11-03T05:01:00Z'),
+      evaluation: {
+        ...sample.evaluation,
+        rubricVersion: 'interview-30-v1',
+        evaluatedThrough: new Date('2026-11-03T05:00:00Z'),
+      },
+    });
+    await request(app.getHttpServer() as Server)
+      .get('/report/sessions/owned/pdf')
+      .set('Authorization', 'Bearer test-user')
+      .expect(400);
+  });
 });

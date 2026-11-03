@@ -1,26 +1,35 @@
+export const RUBRIC_VERSION = "interview-30-v1";
 export const GRADE_SCALE = {
-  version: "practice-grade-v1",
+  version: "practice-grade-30-v1",
   description:
-    "เกรดจากคะแนนรวม: A = 8–10, B = 7–น้อยกว่า 8, C = 6–น้อยกว่า 7, D = 5–น้อยกว่า 6, F = 0–น้อยกว่า 5 เป็นผลการฝึกเท่านั้น",
+    "เกรดเต็ม 30: A = 24–30, B = 21–น้อยกว่า 24, C = 18–น้อยกว่า 21, D = 15–น้อยกว่า 18, F = 0–น้อยกว่า 15",
   bands: [
-    { grade: "A", minimum: 8 },
-    { grade: "B", minimum: 7 },
-    { grade: "C", minimum: 6 },
-    { grade: "D", minimum: 5 },
+    { grade: "A", minimum: 24 },
+    { grade: "B", minimum: 21 },
+    { grade: "C", minimum: 18 },
+    { grade: "D", minimum: 15 },
     { grade: "F", minimum: 0 },
   ],
 };
+export type Dimension = {
+  key: string;
+  label: string;
+  weight: number;
+  criteria?: string;
+  levels?: string[];
+};
 export type Rubric = {
-  gradeScale: typeof GRADE_SCALE;
   version: string;
   min: number;
   max: number;
+  totalMax?: number;
+  formula?: string;
   anchors: string;
   limitation: string;
-  dimensions: { key: string; label: string; weight: number }[];
+  gradeScale: typeof GRADE_SCALE;
+  dimensions: Dimension[];
 };
 export type Evaluation = {
-  grade: string | null;
   id: string;
   sessionId: string;
   technical: number | null;
@@ -28,12 +37,17 @@ export type Evaluation = {
   language: number | null;
   confidence: number | null;
   overall: number | null;
+  totalScore: number | null;
+  displayScore: number | null;
+  scoreMax: number;
+  grade: string | null;
   strengths: string[];
   improvements: string[];
   feedback: string;
   rubricVersion: string;
   rubricSnapshot: Rubric | null;
   sourceTurnVersion: number | null;
+  evaluatedThrough: string | null;
   dimensionFeedback: Record<string, string> | null;
   exampleAnswers: {
     question: string;
@@ -47,6 +61,7 @@ export type Session = {
   id: string;
   title: string | null;
   createdAt: string;
+  lastMessageAt: string | null;
   turnVersion: number | null;
   interview: {
     title: string;
@@ -65,39 +80,37 @@ export type Overview = {
   totalMessages: number;
   averageOverall: number | null;
   averageGrade: string | null;
-  gradeScale: Rubric["gradeScale"];
+  gradeScale: typeof GRADE_SCALE;
   averageRubricVersion: string;
   excludedEvaluations: number;
   sessions: Session[];
   rubric: Rubric;
   legacyApi: boolean;
 };
-const object = (value: unknown): Record<string, unknown> | null =>
-  value !== null && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
+const object = (v: unknown): Record<string, unknown> | null =>
+  v !== null && typeof v === "object" && !Array.isArray(v)
+    ? (v as Record<string, unknown>)
     : null;
-const string = (value: unknown, fallback = "") =>
-  typeof value === "string" ? value : fallback;
-const score = (value: unknown) =>
-  typeof value === "number" &&
-  Number.isFinite(value) &&
-  value >= 0 &&
-  value <= 10
-    ? value
-    : null;
-const version = (value: unknown) =>
-  typeof value === "number" && Number.isInteger(value) && value >= 0
-    ? value
-    : null;
-const strings = (value: unknown): string[] =>
-  Array.isArray(value)
-    ? value.filter((v): v is string => typeof v === "string")
-    : [];
+const string = (v: unknown, fallback = "") =>
+  typeof v === "string" ? v : fallback;
+const strings = (v: unknown): string[] =>
+  Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+const score = (v: unknown) =>
+  typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 10 ? v : null;
+const version = (v: unknown) =>
+  typeof v === "number" && Number.isInteger(v) && v >= 0 ? v : null;
+const date = (v: unknown) =>
+  typeof v === "string" && Number.isFinite(Date.parse(v)) ? v : null;
 export function gradeFromScore(value: number | null) {
-  const valid = score(value);
-  return valid === null
+  return score(value) === null ? null : gradeFromTotalScore(value! * 3);
+}
+export function gradeFromTotalScore(value: number | null) {
+  return typeof value !== "number" ||
+    !Number.isFinite(value) ||
+    value < 0 ||
+    value > 30
     ? null
-    : (GRADE_SCALE.bands.find((b) => valid >= b.minimum)?.grade ?? null);
+    : (GRADE_SCALE.bands.find((b) => value >= b.minimum)?.grade ?? null);
 }
 export function normalizeRubric(value: unknown): Rubric | null {
   const r = object(value);
@@ -112,31 +125,35 @@ export function normalizeRubric(value: unknown): Rubric | null {
     r.dimensions.length !== 4
   )
     return null;
-  const dimensions = r.dimensions.map(object);
-  const expected = ["technical", "communication", "language", "confidence"];
+  const dims = r.dimensions.map(object);
+  const keys = ["technical", "communication", "language", "confidence"];
   if (
-    dimensions.some(
+    dims.some(
       (d) =>
         !d ||
-        !expected.includes(string(d.key)) ||
+        !keys.includes(string(d.key)) ||
         typeof d.label !== "string" ||
         typeof d.weight !== "number" ||
         !Number.isFinite(d.weight),
     ) ||
-    new Set(dimensions.map((d) => d?.key)).size !== 4
+    new Set(dims.map((d) => d?.key)).size !== 4
   )
     return null;
   return {
     version: r.version,
-    anchors: r.anchors,
-    limitation: r.limitation,
     min: 0,
     max: 10,
+    totalMax: r.totalMax === 30 ? 30 : undefined,
+    formula: string(r.formula),
+    anchors: r.anchors,
+    limitation: r.limitation,
     gradeScale: GRADE_SCALE,
-    dimensions: dimensions.map((d) => ({
+    dimensions: dims.map((d) => ({
       key: string(d!.key),
       label: string(d!.label),
       weight: d!.weight as number,
+      criteria: string(d!.criteria),
+      levels: strings(d!.levels),
     })),
   };
 }
@@ -145,90 +162,114 @@ export const LEGACY_DISPLAY: Rubric = {
   min: 0,
   max: 10,
   gradeScale: GRADE_SCALE,
-  anchors: "แสดงคะแนนที่บันทึกไว้ โดยไม่มีรายละเอียดเกณฑ์แยกในผลประเมินนี้",
+  anchors: "ผลเดิมยังไม่มีเหตุผลครบ 4 ด้าน กรุณาประเมินใหม่ด้วยเกณฑ์เต็ม 30",
   limitation:
-    "แสดงคะแนนสามด้านที่บันทึกไว้ เกรดคำนวณจากคะแนนรวม ผลการฝึกเป็นคำแนะนำจากข้อความ ไม่ใช่ผลคัดเลือกเข้าทำงาน",
+    "AI ประเมินจากข้อความเพื่อการฝึก ไม่ใช่ผลคัดเลือกเข้าทำงานหรือการวัดน้ำเสียง",
   dimensions: [
-    { key: "technical", label: "ความถูกต้องและเนื้อหา", weight: 0 },
-    { key: "communication", label: "ความชัดเจน", weight: 0 },
-    { key: "confidence", label: "การสื่อสารที่สะท้อนความมั่นใจ", weight: 0 },
+    { key: "technical", label: "ความถูกต้องและเนื้อหา", weight: 0.25 },
+    { key: "communication", label: "ความชัดเจน", weight: 0.25 },
+    { key: "language", label: "การใช้ภาษา", weight: 0.25 },
+    { key: "confidence", label: "การสื่อสารที่สะท้อนความมั่นใจ", weight: 0.25 },
   ],
 };
-function normalizeEvaluation(
-  value: unknown,
-  sessionId: string,
-): Evaluation | null {
-  if (value == null) return null;
-  const e = object(value);
-  if (!e) throw new Error("รูปแบบผลประเมินไม่ถูกต้อง กรุณาลองโหลดใหม่");
+function normalizeEvaluation(v: unknown, sessionId: string): Evaluation | null {
+  if (v == null) return null;
+  const e = object(v);
+  if (!e) throw new Error("รูปแบบผลประเมินไม่ถูกต้อง กรุณาลองใหม่");
+  const technical = score(e.technical),
+    communication = score(e.communication),
+    language = score(e.language),
+    confidence = score(e.confidence);
+  const rubricVersion = string(e.rubricVersion, "legacy-v0");
   const reasons = object(e.dimensionFeedback);
-  const examples = Array.isArray(e.exampleAnswers)
-    ? e.exampleAnswers
-        .map(object)
-        .filter((x): x is Record<string, unknown> => x !== null)
-        .map((x) => ({
-          question: string(x.question),
-          originalAnswer: string(x.originalAnswer),
-          answer: string(x.answer),
-        }))
-    : [];
+  const isNew =
+    rubricVersion === RUBRIC_VERSION &&
+    [technical, communication, language, confidence].every((x) => x !== null) &&
+    ["technical", "communication", "language", "confidence"].every(
+      (key) =>
+        typeof reasons?.[key] === "string" &&
+        string(reasons[key]).trim().length >= 10,
+    );
+  const totalScore = isNew
+    ? Number(
+        (
+          (technical! + communication! + language! + confidence!) *
+          0.75
+        ).toFixed(2),
+      )
+    : null;
   const overall = score(e.overall);
   return {
     id: string(e.id),
     sessionId,
-    technical: score(e.technical),
-    communication: score(e.communication),
-    language: score(e.language),
-    confidence: score(e.confidence),
+    technical,
+    communication,
+    language,
+    confidence,
     overall,
-    grade: gradeFromScore(overall),
+    totalScore,
+    scoreMax: totalScore === null ? 10 : 30,
+    displayScore: totalScore ?? overall,
+    grade:
+      totalScore === null
+        ? gradeFromScore(overall)
+        : gradeFromTotalScore(totalScore),
     strengths: strings(e.strengths),
     improvements: strings(e.improvements),
     feedback: string(e.feedback),
-    rubricVersion: string(e.rubricVersion, "legacy-v0"),
+    rubricVersion,
     rubricSnapshot: normalizeRubric(e.rubricSnapshot),
     sourceTurnVersion: version(e.sourceTurnVersion),
+    evaluatedThrough: date(e.evaluatedThrough),
     dimensionFeedback: reasons
       ? (Object.fromEntries(
-          Object.entries(reasons).filter(([, v]) => typeof v === "string"),
+          Object.entries(reasons).filter(([, x]) => typeof x === "string"),
         ) as Record<string, string>)
       : null,
-    exampleAnswers: examples,
+    exampleAnswers: [],
     createdAt: string(e.createdAt),
     updatedAt: string(e.updatedAt),
   };
 }
-export function isEvaluationCurrent(session: Session) {
-  const e = session.evaluation;
+export function isEvaluationCurrent(s: Session) {
+  const e = s.evaluation;
+  if (!e) return false;
+  if (e.totalScore !== null)
+    return (
+      !!e.evaluatedThrough &&
+      (!s.lastMessageAt ||
+        Date.parse(e.evaluatedThrough) >= Date.parse(s.lastMessageAt))
+    );
   return (
-    !!e &&
     e.overall !== null &&
     e.sourceTurnVersion !== null &&
-    session.turnVersion !== null &&
-    e.sourceTurnVersion === session.turnVersion
+    s.turnVersion !== null &&
+    e.sourceTurnVersion === s.turnVersion
   );
 }
-// The current API exports saved evaluations without SRS turn-version metadata.
-// Keep strict stale checks when a versioned evaluation is available.
-export function canDownloadEvaluation(session: Session) {
-  const e = session.evaluation;
-  if (!e || e.overall === null) return false;
-  if (e.sourceTurnVersion === null && session.turnVersion === null) return true;
-  return isEvaluationCurrent(session);
+export function canDownloadEvaluation(s: Session) {
+  const e = s.evaluation;
+  if (!e || e.displayScore === null) return false;
+  if (e.rubricVersion === RUBRIC_VERSION)
+    return e.totalScore !== null && isEvaluationCurrent(s);
+  return e.sourceTurnVersion === null && s.turnVersion === null
+    ? true
+    : isEvaluationCurrent(s);
 }
-export function normalizeOverview(value: unknown): Overview {
-  const r = object(value);
+export function normalizeOverview(v: unknown): Overview {
+  const r = object(v);
   if (!r || !Array.isArray(r.sessions))
-    throw new Error("รูปแบบข้อมูลรายงานไม่ถูกต้อง กรุณาลองโหลดใหม่");
-  const sessions = r.sessions.map((value): Session => {
-    const s = object(value),
+    throw new Error("รูปแบบข้อมูลรายงานไม่ถูกต้อง");
+  const sessions = r.sessions.map((v): Session => {
+    const s = object(v),
       i = object(s?.interview);
     if (!s || typeof s.id !== "string" || !i)
-      throw new Error("ข้อมูลรอบสัมภาษณ์ไม่ครบ กรุณาลองโหลดใหม่");
+      throw new Error("ข้อมูลรอบสัมภาษณ์ไม่ครบ");
     return {
       id: s.id,
       title: typeof s.title === "string" ? s.title : null,
       createdAt: string(s.createdAt, string(s.updatedAt)),
+      lastMessageAt: date(s.lastMessageAt),
       turnVersion: version(s.turnVersion),
       interview: {
         title: string(i.title, string(s.title, "รอบฝึก")),
@@ -236,28 +277,23 @@ export function normalizeOverview(value: unknown): Overview {
         interviewType: string(i.interviewType, "ไม่ได้ระบุ"),
         difficulty: string(i.difficulty, "ไม่ได้ระบุ"),
         status: string(i.status),
-        startedAt: typeof i.startedAt === "string" ? i.startedAt : null,
-        finishedAt: typeof i.finishedAt === "string" ? i.finishedAt : null,
+        startedAt: date(i.startedAt),
+        finishedAt: date(i.finishedAt),
       },
       evaluation: normalizeEvaluation(s.evaluation, s.id),
     };
   });
   const rubric = normalizeRubric(r.rubric);
-  const eligible =
-    rubric === null
-      ? sessions.filter((s) => s.evaluation?.overall != null)
-      : sessions.filter(
-          (s) =>
-            isEvaluationCurrent(s) &&
-            s.evaluation?.rubricVersion === rubric?.version &&
-            s.evaluation?.overall !== null,
-        );
+  const eligible = sessions.filter(
+    (s) => s.evaluation?.totalScore != null && isEvaluationCurrent(s),
+  );
   const averageOverall = eligible.length
-    ? Math.round(
-        (eligible.reduce((sum, s) => sum + s.evaluation!.overall!, 0) /
-          eligible.length) *
-          100,
-      ) / 100
+    ? Number(
+        (
+          eligible.reduce((sum, s) => sum + s.evaluation!.totalScore!, 0) /
+          eligible.length
+        ).toFixed(2),
+      )
     : null;
   return {
     totalInterviews: version(r.totalInterviews) ?? 0,
@@ -267,11 +303,10 @@ export function normalizeOverview(value: unknown): Overview {
     rubric: rubric ?? LEGACY_DISPLAY,
     gradeScale: GRADE_SCALE,
     averageOverall,
-    averageGrade: gradeFromScore(averageOverall),
-    averageRubricVersion:
-      rubric?.version ?? "ผลประเมินที่บันทึกไว้ (ไม่มีเวอร์ชันเกณฑ์)",
+    averageGrade: gradeFromTotalScore(averageOverall),
+    averageRubricVersion: RUBRIC_VERSION,
     excludedEvaluations:
       sessions.filter((s) => s.evaluation).length - eligible.length,
-    legacyApi: rubric === null,
+    legacyApi: rubric?.version !== RUBRIC_VERSION,
   };
 }

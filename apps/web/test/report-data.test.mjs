@@ -2,220 +2,166 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   normalizeOverview,
-  normalizeRubric,
-  isEvaluationCurrent,
   canDownloadEvaluation,
+  isEvaluationCurrent,
+  gradeFromTotalScore,
+  normalizeRubric,
 } from "../components/report/report-data.ts";
+const reasons = Object.fromEntries(
+  ["technical", "communication", "language", "confidence"].map((k) => [
+    k,
+    "อธิบายได้ตรงประเด็น แต่ยังขาดตัวอย่างประกอบที่ชัดเจน",
+  ]),
+);
 const evaluation = {
-  id: "evaluation-1",
-  overall: 8,
+  id: "e",
   technical: 8,
   communication: 8,
+  language: 8,
   confidence: 8,
+  overall: 8,
+  rubricVersion: "interview-30-v1",
+  dimensionFeedback: reasons,
+  evaluatedThrough: "2026-11-03T05:00:00Z",
   strengths: ["ชัดเจน"],
   improvements: ["เพิ่มตัวอย่าง"],
-  feedback: "คำแนะนำเดิม",
+  feedback: "ข้อเสนอแนะ",
 };
 const session = {
-  id: "session-1",
-  createdAt: "2026-10-09T10:00:00Z",
+  id: "s",
+  createdAt: "2026-11-03T04:00:00Z",
+  lastMessageAt: "2026-11-03T05:00:00Z",
   interview: {
-    title: "ฝึก QA",
-    position: "QA Tester",
+    title: "ฝึกสัมภาษณ์",
+    interviewType: "HR",
+    position: "Developer",
     difficulty: "easy",
-    status: "in_progress",
+    status: "draft",
   },
   evaluation,
 };
-const legacy = {
+const input = {
+  sessions: [session],
   totalInterviews: 1,
   totalSessions: 1,
-  totalMessages: 3,
-  averageOverall: 8,
-  sessions: [session],
+  totalMessages: 2,
 };
-const rubric = {
-  version: "thai-interview-v1",
-  min: 0,
-  max: 10,
-  anchors: "เกณฑ์จริง",
-  limitation: "จากข้อความ",
-  dimensions: ["technical", "communication", "language", "confidence"].map(
-    (key) => ({ key, label: key, weight: 0.25 }),
-  ),
-};
-const current = () => ({
-  ...legacy,
-  rubric,
-  sessions: [
-    {
-      ...session,
-      turnVersion: 2,
-      evaluation: {
-        ...evaluation,
-        language: 8,
-        rubricVersion: rubric.version,
-        sourceTurnVersion: 2,
-        rubricSnapshot: rubric,
-      },
-    },
-  ],
+test("four scores produce total 24/30, A, and downloadable current report", () => {
+  const d = normalizeOverview(input),
+    e = d.sessions[0].evaluation;
+  assert.equal(e.totalScore, 24);
+  assert.equal(e.scoreMax, 30);
+  assert.equal(e.grade, "A");
+  assert.equal(d.averageOverall, 24);
+  assert.equal(d.averageGrade, "A");
+  assert.equal(canDownloadEvaluation(d.sessions[0]), true);
 });
-test("legacy API lacking rubric/gradeScale renders normalized report instead of crashing", () => {
-  const data = normalizeOverview(legacy);
-  assert.equal(data.legacyApi, true);
-  assert.ok(data.gradeScale.description);
-  assert.equal(data.rubric.dimensions.length, 3);
-  assert.equal(data.sessions[0].evaluation.overall, 8);
-  assert.equal(data.sessions[0].evaluation.grade, "A");
-  assert.equal(data.sessions[0].evaluation.language, null);
-  assert.equal(isEvaluationCurrent(data.sessions[0]), false);
-  assert.equal(data.averageOverall, 8);
-  assert.equal(data.averageGrade, "A");
-  assert.equal(data.excludedEvaluations, 0);
-});
-test("no history and old average zero do not fabricate an F grade", () => {
-  const data = normalizeOverview({
-    ...legacy,
-    sessions: [],
-    totalInterviews: 0,
-    totalSessions: 0,
-    totalMessages: 0,
-    averageOverall: 0,
-  });
-  assert.deepEqual(data.sessions, []);
-  assert.equal(data.averageGrade, null);
-});
-test("current API preserves score and computes grade/average from eligible records", () => {
-  const data = normalizeOverview(current());
-  assert.equal(data.legacyApi, false);
-  assert.equal(data.averageOverall, 8);
-  assert.equal(data.averageGrade, "A");
-  assert.equal(isEvaluationCurrent(data.sessions[0]), true);
-});
-test("stale evaluation is excluded and cannot be mistaken for current", () => {
-  const input = current();
-  input.sessions[0].turnVersion = 3;
-  const data = normalizeOverview(input);
-  assert.equal(data.averageGrade, null);
-  assert.equal(data.excludedEvaluations, 1);
-  assert.equal(isEvaluationCurrent(data.sessions[0]), false);
-});
-test("legacy null versions are never equal-valid versions", () => {
-  const data = normalizeOverview({
-    ...legacy,
-    sessions: [
-      {
-        ...session,
-        turnVersion: null,
-        evaluation: { ...evaluation, sourceTurnVersion: null },
-      },
-    ],
-  });
-  assert.equal(isEvaluationCurrent(data.sessions[0]), false);
-});
-test("a rubric from before grade support gets the published display scale", () => {
-  const normalized = normalizeRubric(rubric);
-  assert.ok(normalized.gradeScale.description);
-  assert.equal(normalized.version, rubric.version);
-});
-test("partial rubric is not presented as a complete scoring policy", () => {
-  assert.equal(normalizeRubric({ version: "v1" }), null);
-  assert.equal(normalizeRubric({ ...rubric, dimensions: null }), null);
-});
-test("invalid overall scores are not coerced, clamped or graded", () => {
-  for (const overall of [null, "8", -1, 11, NaN])
-    assert.equal(
-      normalizeOverview({
-        ...legacy,
-        sessions: [{ ...session, evaluation: { ...evaluation, overall } }],
-      }).sessions[0].evaluation.grade,
-      null,
-    );
-});
-test("genuine zero remains a valid F", () =>
-  assert.equal(
-    normalizeOverview({
-      ...legacy,
-      sessions: [{ ...session, evaluation: { ...evaluation, overall: 0 } }],
-    }).sessions[0].evaluation.grade,
-    "F",
-  ));
-test("malformed overview is rejected before being stored in render state", () => {
-  for (const payload of [
-    null,
-    {},
-    "text",
-    { sessions: null },
-    { sessions: [null] },
-  ])
-    assert.throws(() => normalizeOverview(payload), /รายงาน|สัมภาษณ์/);
-});
-test("null feedback arrays and examples are safe to render", () => {
-  const data = normalizeOverview({
-    ...legacy,
+test("historical results remain /10 without inventing a language score", () => {
+  const d = normalizeOverview({
+    ...input,
     sessions: [
       {
         ...session,
         evaluation: {
           ...evaluation,
-          strengths: null,
-          improvements: {},
-          exampleAnswers: [null],
+          rubricVersion: "legacy-v0",
+          language: null,
+          dimensionFeedback: null,
         },
       },
     ],
   });
-  assert.deepEqual(data.sessions[0].evaluation.strengths, []);
-  assert.deepEqual(data.sessions[0].evaluation.improvements, []);
-  assert.deepEqual(data.sessions[0].evaluation.exampleAnswers, []);
+  assert.equal(d.sessions[0].evaluation.totalScore, null);
+  assert.equal(d.sessions[0].evaluation.scoreMax, 10);
+  assert.equal(d.averageOverall, null);
+  assert.equal(d.excludedEvaluations, 1);
 });
-
-test("saved evaluations without turn versions remain downloadable", () => {
-  assert.equal(
-    canDownloadEvaluation(normalizeOverview(legacy).sessions[0]),
-    true,
-  );
+test("conversation changes exclude scores and disable new PDF", () => {
+  const d = normalizeOverview({
+    ...input,
+    sessions: [{ ...session, lastMessageAt: "2026-11-03T05:01:00Z" }],
+  });
+  assert.equal(isEvaluationCurrent(d.sessions[0]), false);
+  assert.equal(canDownloadEvaluation(d.sessions[0]), false);
+  assert.equal(d.averageOverall, null);
 });
-test("no score and invalid score keep PDF unavailable", () => {
-  for (const value of [
-    null,
-    { ...evaluation, overall: null },
-    { ...evaluation, overall: 11 },
+test("missing evaluatedThrough never claims new score is current", () => {
+  const d = normalizeOverview({
+    ...input,
+    sessions: [
+      { ...session, evaluation: { ...evaluation, evaluatedThrough: null } },
+    ],
+  });
+  assert.equal(canDownloadEvaluation(d.sessions[0]), false);
+});
+test("missing reason or language prevents a complete 30-point report", () => {
+  for (const patch of [
+    { language: null },
+    { dimensionFeedback: { ...reasons, language: "" } },
   ]) {
-    const data = normalizeOverview({
-      ...legacy,
-      sessions: [{ ...session, evaluation: value }],
+    const d = normalizeOverview({
+      ...input,
+      sessions: [{ ...session, evaluation: { ...evaluation, ...patch } }],
     });
-    assert.equal(canDownloadEvaluation(data.sessions[0]), false);
+    assert.equal(d.sessions[0].evaluation.totalScore, null);
+    assert.equal(canDownloadEvaluation(d.sessions[0]), false);
   }
 });
-test("versioned stale results still require re-scoring for PDF", () => {
-  const input = current();
-  input.sessions[0].turnVersion = 3;
-  assert.equal(
-    canDownloadEvaluation(normalizeOverview(input).sessions[0]),
-    false,
-  );
-  assert.equal(
-    canDownloadEvaluation(normalizeOverview(current()).sessions[0]),
-    true,
-  );
-});
-test("current backend interview type, zero scores and missing optional metadata survive normalization", () => {
-  const data = normalizeOverview({
-    ...legacy,
+test("zero remains a valid F rather than missing", () => {
+  const d = normalizeOverview({
+    ...input,
     sessions: [
       {
         ...session,
-        interview: { ...session.interview, interviewType: "HR" },
-        evaluation: { ...evaluation, overall: 0 },
+        evaluation: {
+          ...evaluation,
+          technical: 0,
+          communication: 0,
+          language: 0,
+          confidence: 0,
+          overall: 0,
+        },
       },
     ],
   });
-  assert.equal(data.sessions[0].interview.interviewType, "HR");
-  assert.equal(data.sessions[0].evaluation.language, null);
-  assert.equal(data.averageOverall, 0);
-  assert.equal(data.averageGrade, "F");
-  assert.equal(canDownloadEvaluation(data.sessions[0]), true);
+  assert.equal(d.averageOverall, 0);
+  assert.equal(d.averageGrade, "F");
 });
+test("invalid scores cannot become valid grades", () => {
+  for (const technical of [null, "8", -1, 11, NaN])
+    assert.equal(
+      normalizeOverview({
+        ...input,
+        sessions: [{ ...session, evaluation: { ...evaluation, technical } }],
+      }).sessions[0].evaluation.totalScore,
+      null,
+    );
+});
+test("no history does not invent an F grade", () =>
+  assert.equal(normalizeOverview({ sessions: [] }).averageGrade, null));
+test("null arrays and invalid overview are handled safely", () => {
+  const d = normalizeOverview({
+    ...input,
+    sessions: [
+      {
+        ...session,
+        evaluation: { ...evaluation, strengths: null, improvements: null },
+      },
+    ],
+  });
+  assert.deepEqual(d.sessions[0].evaluation.strengths, []);
+  assert.throws(() => normalizeOverview({}), /รายงาน/);
+});
+for (const [score, grade] of [
+  [0, "F"],
+  [15, "D"],
+  [18, "C"],
+  [21, "B"],
+  [24, "A"],
+  [30, "A"],
+  [31, null],
+])
+  test(`grade ${score} is ${grade}`, () =>
+    assert.equal(gradeFromTotalScore(score), grade));
+test("partial rubric is not displayed as a valid scoring policy", () =>
+  assert.equal(normalizeRubric({ version: "broken" }), null));

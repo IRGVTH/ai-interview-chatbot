@@ -77,6 +77,11 @@ model ChatMessage {
 model ChatEvaluation {
   id            String   @id @default(cuid())
   sessionId     String   @unique
+  language Float?
+  rubricVersion String @default("legacy-v0")
+  rubricSnapshot Json?
+  dimensionFeedback Json?
+  evaluatedThrough DateTime?
   communication Float
   technical     Float
   confidence    Float

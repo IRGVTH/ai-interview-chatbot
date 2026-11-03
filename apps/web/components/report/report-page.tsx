@@ -105,17 +105,11 @@ export function ReportPage() {
     );
   const session = data.sessions.find((s) => s.id === selected);
   const e = session?.evaluation;
-  const chronological = [...data.sessions].sort((a, b) =>
-    a.createdAt.localeCompare(b.createdAt),
-  );
-  const versions = new Set(
-    data.sessions.map((s) => s.evaluation?.rubricVersion).filter(Boolean),
-  );
   return (
     <main className="space-y-6 text-black">
       <header>
         <h1 className="text-3xl font-bold">Interview Report</h1>
-        <p>ประวัติ ผลประเมิน และพัฒนาการจากข้อมูลที่บันทึกจริง</p>
+        <p className="mt-2">คะแนนเต็ม 30 พร้อมเกณฑ์และเหตุผลแยกทั้ง 4 ด้าน</p>
       </header>
       {error && (
         <p role="alert" className="rounded-xl bg-red-50 p-4 text-red-700">
@@ -127,38 +121,24 @@ export function ReportPage() {
           ["Interviews", data.totalInterviews],
           ["Sessions", data.totalSessions],
           ["Messages", data.totalMessages],
-          ["Average / 10", data.averageOverall ?? "ยังไม่มีคะแนน"],
-          ["เกรดจากคะแนนเฉลี่ย", data.averageGrade ?? "ยังไม่มีเกรด"],
+          ["เฉลี่ย / 30", data.averageOverall ?? "ยังไม่มีคะแนน"],
+          ["เกรดเฉลี่ย", data.averageGrade ?? "—"],
         ].map(([label, value]) => (
-          <div className="rounded-xl bg-white p-4" key={String(label)}>
+          <div key={String(label)} className="rounded-xl bg-white p-4">
             <p>{label}</p>
-            <strong className="text-xl">{value}</strong>
+            <strong className="text-2xl">{value}</strong>
           </div>
         ))}
       </div>
-      <p className="text-sm">
-        {data.legacyApi
-          ? "ค่าเฉลี่ยจากผลประเมินที่บันทึกไว้ หากตอบเพิ่ม ให้ประเมินใหม่ก่อนเปรียบเทียบ"
-          : `ค่าเฉลี่ยใช้ผลล่าสุดที่ตรงกับบทสนทนา เกณฑ์ ${data.averageRubricVersion} เท่านั้น (${data.excludedEvaluations} ผลไม่รวมในค่าเฉลี่ย)`}{" "}
-        ตำแหน่งและความยากต่างกันอาจเทียบคะแนนโดยตรงไม่ได้
+      <p className="text-sm text-gray-600">
+        ค่าเฉลี่ยนับเฉพาะผลเกณฑ์เต็ม 30 ที่ยังตรงกับบทสนทนา (
+        {data.excludedEvaluations} ผลไม่รวม) ผลเดิมต้องประเมินใหม่
+        ไม่แปลงคะแนนหรือเติมคะแนนภาษาให้เอง
       </p>
-      {versions.size > 1 && (
-        <p role="status">
-          มีเกณฑ์หลายเวอร์ชัน กรุณาประเมินด้วยเวอร์ชันเดียวกันก่อนเปรียบเทียบ
-        </p>
-      )}
-      <p className="rounded-xl border bg-white p-4 text-sm">
-        {data.gradeScale.description}
-      </p>
-      {data.legacyApi ? (
-        <p role="status" className="rounded-xl bg-amber-50 p-4 text-amber-900">
-          กำลังแสดงคะแนนที่บันทึกไว้ เกรดคำนวณจากคะแนนรวม ดาวน์โหลด PDF
-          ได้เมื่อมีผลประเมิน หากบทสนทนาเปลี่ยน ให้กดประเมินใหม่ก่อน
-          ผลประเมินนี้ไม่มีเวอร์ชันเกณฑ์ คะแนนภาษาแยก หรือตัวอย่างคำตอบ
-        </p>
-      ) : (
-        <RubricGuide token={token} />
-      )}
+      <RubricGuide
+        token={token}
+        rubric={data.legacyApi ? undefined : data.rubric}
+      />
       {!data.sessions.length ? (
         <p>
           ยังไม่มีประวัติ{" "}
@@ -169,112 +149,72 @@ export function ReportPage() {
       ) : (
         <>
           <section className="rounded-xl bg-white p-4">
-            <h2 className="text-xl font-semibold">พัฒนาการและประวัติ</h2>
+            <h2 className="text-xl font-semibold">ประวัติผลประเมิน</h2>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr>
                     {[
                       "วันที่ / รอบ",
-                      "ประเภท / ตำแหน่ง / ระดับ",
-                      "เกณฑ์",
-                      "คะแนน / 10",
+                      "ประเภท / ตำแหน่ง",
+                      "คะแนน",
                       "เกรด",
-                      "เทียบรอบก่อนในบริบทเดียวกัน",
+                      "สถานะ",
                     ].map((h) => (
-                      <th key={h} className="p-2">
+                      <th key={h} className="p-3">
                         {h}
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {chronological.map((s, index) => {
-                    const ev = s.evaluation;
-                    const valid =
-                      isEvaluationCurrent(s) && ev?.overall !== null;
-                    const prior = chronological
-                      .slice(0, index)
-                      .reverse()
-                      .find(
-                        (p) =>
-                          p.evaluation &&
-                          isEvaluationCurrent(p) &&
-                          p.evaluation.rubricVersion === ev?.rubricVersion &&
-                          p.interview.position === s.interview.position &&
-                          p.interview.interviewType ===
-                            s.interview.interviewType &&
-                          p.interview.difficulty === s.interview.difficulty,
-                      );
-                    return (
-                      <tr key={s.id} className="border-t">
-                        <td className="p-2">
-                          <button
-                            className="underline"
-                            onClick={() => setSelected(s.id)}
-                          >
-                            {s.interview.title}
-                          </button>
-                          <br />
-                          {new Date(s.createdAt).toLocaleString("th-TH")}
-                        </td>
-                        <td className="p-2">
-                          {s.interview.interviewType} / {s.interview.position} /{" "}
-                          {s.interview.difficulty}
-                        </td>
-                        <td className="p-2">{ev?.rubricVersion ?? "—"}</td>
-                        <td className="p-2">
-                          {ev
-                            ? `${ev.overall ?? "ยังไม่มีคะแนน"}${ev.sourceTurnVersion === null ? " (คะแนนที่บันทึก)" : valid ? "" : " (ต้องประเมินใหม่)"}`
-                            : "ยังไม่ประเมิน"}
-                        </td>
-                        <td className="p-2">
-                          <strong>
-                            {ev?.sourceTurnVersion === null || valid
-                              ? (ev?.grade ?? "—")
-                              : "—"}
-                          </strong>
-                        </td>
-                        <td className="p-2">
-                          {valid &&
-                          ev?.overall != null &&
-                          prior?.evaluation?.overall != null
-                            ? (
-                                (ev.overall ?? 0) -
-                                (prior.evaluation.overall ?? 0)
-                              ).toFixed(1)
-                            : "ยังไม่มีรอบที่เทียบได้"}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {data.sessions.map((s) => (
+                    <tr key={s.id} className="border-t">
+                      <td className="p-3">
+                        <button
+                          onClick={() => setSelected(s.id)}
+                          className="font-medium underline"
+                        >
+                          {s.interview.title}
+                        </button>
+                        <br />
+                        {new Date(s.createdAt).toLocaleString("th-TH")}
+                      </td>
+                      <td className="p-3">
+                        {s.interview.interviewType} / {s.interview.position}
+                      </td>
+                      <td className="p-3">
+                        {s.evaluation
+                          ? `${s.evaluation.displayScore ?? "—"} / ${s.evaluation.scoreMax}`
+                          : "ยังไม่ประเมิน"}
+                      </td>
+                      <td className="p-3">{s.evaluation?.grade ?? "—"}</td>
+                      <td className="p-3">
+                        {!s.evaluation
+                          ? "ยังไม่ประเมิน"
+                          : s.evaluation.totalScore === null
+                            ? "ผลเดิม กรุณาประเมินใหม่เต็ม 30"
+                            : isEvaluationCurrent(s)
+                              ? "ผลล่าสุดที่บันทึก"
+                              : "บทสนทนาเปลี่ยน กรุณาประเมินใหม่"}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
           </section>
           {session && (
-            <section className="space-y-4 rounded-xl bg-white p-5">
-              <h2 className="text-xl font-semibold">
-                {session.interview.title}
-              </h2>
-              <p>
-                {session.interview.interviewType} / {session.interview.position}{" "}
-                / {session.interview.difficulty} / {session.interview.status}
-              </p>
-              <p className="text-sm">
-                เริ่ม:{" "}
-                {session.interview.startedAt
-                  ? new Date(session.interview.startedAt).toLocaleString(
-                      "th-TH",
-                    )
-                  : "—"}{" "}
-                จบ:{" "}
-                {session.interview.finishedAt
-                  ? new Date(session.interview.finishedAt).toLocaleString(
-                      "th-TH",
-                    )
-                  : "ยังไม่จบรอบ"}
-              </p>
+            <section className="space-y-5 rounded-xl bg-white p-5">
+              <div>
+                <h2 className="text-xl font-semibold">
+                  {session.interview.title}
+                </h2>
+                <p>
+                  {session.interview.interviewType} /{" "}
+                  {session.interview.position} / {session.interview.difficulty}
+                </p>
+              </div>
               <div className="flex flex-wrap gap-3">
                 <Link
                   href={`/chat?sessionId=${session.id}`}
@@ -290,8 +230,8 @@ export function ReportPage() {
                   {busy === session.id
                     ? "กำลังประเมิน…"
                     : e
-                      ? "ประเมินใหม่"
-                      : "Generate score"}
+                      ? "ประเมินใหม่เต็ม 30"
+                      : "ประเมินคะแนนเต็ม 30"}
                 </button>
                 <button
                   disabled={!!busy || !canDownloadEvaluation(session)}
@@ -303,100 +243,119 @@ export function ReportPage() {
                     : "ดาวน์โหลด PDF"}
                 </button>
               </div>
-              <p className="text-sm text-gray-600">
-                {e
-                  ? "PDF ใช้ผลประเมินที่บันทึกไว้ หากตอบเพิ่มแล้ว ให้กดประเมินใหม่ก่อน"
-                  : "กรุณากด Generate score ก่อนดาวน์โหลด PDF"}
-              </p>
-              {e ? (
+              {!e ? (
+                <p>กรุณาประเมินเพื่อดูคะแนนและเหตุผลรายด้าน</p>
+              ) : (
                 <>
-                  <div className="flex flex-wrap items-center gap-4 rounded-xl bg-zinc-50 p-5">
-                    <div>
-                      <p className="text-sm">
-                        {e.sourceTurnVersion === null
-                          ? "เกรดจากคะแนนที่บันทึก"
-                          : "เกรดสรุปผลการฝึก"}
+                  {e.totalScore === null ? (
+                    <p role="status" className="rounded-xl bg-amber-50 p-4">
+                      นี่คือผลเดิมเต็ม 10
+                      ยังไม่มีคะแนนภาษาและเหตุผลครบตามเกณฑ์ใหม่
+                      กรุณากดประเมินใหม่ ผลเก่าจะไม่ถูกแปลงเป็นเต็ม 30
+                      โดยอัตโนมัติ
+                    </p>
+                  ) : (
+                    !isEvaluationCurrent(session) && (
+                      <p role="status" className="rounded-xl bg-amber-50 p-4">
+                        บทสนทนาเปลี่ยนหลังประเมิน กรุณาประเมินใหม่ก่อนดาวน์โหลด
+                        PDF
                       </p>
-                      <strong className="text-5xl">
-                        {e.sourceTurnVersion === null ||
-                        isEvaluationCurrent(session)
-                          ? (e.grade ?? "—")
-                          : "—"}
-                      </strong>
+                    )
+                  )}
+                  <div className="flex flex-wrap items-center gap-6 rounded-xl bg-indigo-50 p-6">
+                    <div>
+                      <p>เกรดผลการฝึก{e.totalScore === null ? "เดิม" : ""}</p>
+                      <strong className="text-5xl">{e.grade ?? "—"}</strong>
                     </div>
                     <div>
-                      <p className="text-xl font-semibold">
-                        คะแนนรวม {e.overall ?? "ยังไม่มีคะแนน"} / 10
+                      <p className="text-3xl font-bold">
+                        {e.displayScore ?? "—"} / {e.scoreMax}
                       </p>
-                      <p className="text-sm">เกณฑ์ {e.rubricVersion}</p>
+                      <p className="mt-2 text-sm">{e.rubricVersion}</p>
                     </div>
                   </div>
-                  {e.sourceTurnVersion !== null &&
-                    !isEvaluationCurrent(session) && (
-                      <p role="status">
-                        บทสนทนาเปลี่ยนแล้ว ต้องประเมินใหม่ก่อนส่งออก
-                      </p>
-                    )}
-                  <p>
-                    {e.rubricSnapshot?.anchors ??
-                      "ผลประเมินนี้ไม่มีรายละเอียดเกณฑ์ที่บันทึกไว้"}
+                  <p className="text-sm">{data.gradeScale.description}</p>
+                  <p className="text-sm">
+                    สูตรใหม่: (ผลรวมคะแนนดิบ 4 ด้าน ÷ 40) × 30
+                    แต่ละด้านมีน้ำหนัก 25% หรือสูงสุด 7.5 คะแนน
                   </p>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {data.rubric.dimensions.map((d) => (
-                      <div className="rounded-xl border p-3" key={d.key}>
-                        <h3 className="font-semibold">
-                          {d.label}:{" "}
-                          {e[
-                            d.key as
-                              | "technical"
-                              | "communication"
-                              | "language"
-                              | "confidence"
-                          ] ?? "ประเมินไม่ได้"}{" "}
-                          / 10
-                        </h3>
-                        <p>
-                          {e.dimensionFeedback?.[d.key] ??
-                            "ไม่มีคำอธิบายแยกรายด้านในผลประเมินนี้"}
-                        </p>
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    {(
+                      e.rubricSnapshot?.dimensions ?? data.rubric.dimensions
+                    ).map((d) => {
+                      const value =
+                        e[
+                          d.key as
+                            | "technical"
+                            | "communication"
+                            | "language"
+                            | "confidence"
+                        ];
+                      return (
+                        <article
+                          key={d.key}
+                          className="space-y-3 rounded-xl border p-5"
+                        >
+                          <h3 className="font-semibold">{d.label}</h3>
+                          <p className="text-2xl font-bold">
+                            {value ?? "ยังไม่ได้ประเมิน"}
+                            {value !== null ? " / 10" : ""}
+                          </p>
+                          {value !== null && e.totalScore !== null && (
+                            <p className="text-sm text-indigo-700">
+                              คิดเป็น {Number((value * 0.75).toFixed(2))} / 7.5
+                              คะแนน
+                            </p>
+                          )}
+                          <p className="text-sm text-gray-600">{d.criteria}</p>
+                          <div className="rounded-lg bg-gray-50 p-3">
+                            <p className="font-medium">ทำไมจึงได้คะแนนนี้</p>
+                            <p className="mt-2 whitespace-pre-wrap">
+                              {e.dimensionFeedback?.[d.key] ??
+                                "ยังไม่มีเหตุผลที่บันทึกไว้ กรุณาประเมินใหม่"}
+                            </p>
+                          </div>
+                          {d.levels?.length ? (
+                            <details className="text-sm">
+                              <summary className="cursor-pointer font-medium">
+                                ดู Rubric ของด้านนี้
+                              </summary>
+                              <ul className="mt-2 list-disc space-y-1 pl-5">
+                                {d.levels.map((level) => (
+                                  <li key={level}>{level}</li>
+                                ))}
+                              </ul>
+                            </details>
+                          ) : null}
+                        </article>
+                      );
+                    })}
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    คะแนนย่อยที่แสดงปัดเพื่ออ่านง่าย
+                    คะแนนรวมคำนวณจากคะแนนดิบโดยไม่ปัดระหว่างทาง
+                  </p>
+                  <h3 className="font-semibold">ข้อเสนอแนะภาพรวม</h3>
+                  <p className="whitespace-pre-wrap">{e.feedback}</p>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {[
+                      ["จุดแข็ง", e.strengths],
+                      ["สิ่งที่ควรปรับปรุง", e.improvements],
+                    ].map(([label, items]) => (
+                      <div key={String(label)}>
+                        <h3 className="font-semibold">{String(label)}</h3>
+                        <ul className="mt-2 list-disc pl-5">
+                          {(items as string[]).map((item, i) => (
+                            <li key={i}>{item}</li>
+                          ))}
+                        </ul>
                       </div>
                     ))}
                   </div>
-                  <p>
+                  <p className="text-sm text-gray-600">
                     {e.rubricSnapshot?.limitation ?? data.rubric.limitation}
                   </p>
-                  <h3 className="font-semibold">Feedback</h3>
-                  <p>{e.feedback}</p>
-                  <h3 className="font-semibold">จุดแข็ง</h3>
-                  <ul className="list-disc pl-5">
-                    {e.strengths.map((s, i) => (
-                      <li key={i}>{s}</li>
-                    ))}
-                  </ul>
-                  <h3 className="font-semibold">สิ่งที่ควรปรับปรุง</h3>
-                  <ul className="list-disc pl-5">
-                    {e.improvements.map((s, i) => (
-                      <li key={i}>{s}</li>
-                    ))}
-                  </ul>
-                  <h3 className="font-semibold">ตัวอย่างคำตอบที่ดีขึ้น</h3>
-                  {e.exampleAnswers?.length ? (
-                    e.exampleAnswers.map((a, i) => (
-                      <div
-                        className="space-y-2 border-t pt-3 whitespace-pre-wrap break-words"
-                        key={i}
-                      >
-                        <p>คำถาม: {a.question}</p>
-                        <p>คำตอบเดิม: {a.originalAnswer}</p>
-                        <p>ตัวอย่าง: {a.answer}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <p>ผลประเมินนี้ไม่มีตัวอย่างคำตอบแยกต่างหาก</p>
-                  )}
                 </>
-              ) : (
-                <p>ยังไม่มีผลประเมิน</p>
               )}
             </section>
           )}

@@ -1,4 +1,6 @@
 import { renderReportPdf, PdfReport } from './report-pdf';
+import * as PDFDocument from 'pdfkit';
+import { RUBRIC, RUBRIC_VERSION } from './rubric';
 
 const fixture: PdfReport = {
   id: 'sample-session',
@@ -22,6 +24,43 @@ const fixture: PdfReport = {
 };
 
 describe('Thai report PDF', () => {
+  it('exports each dimension out of 30 and their arithmetic mean with a grade', async () => {
+    const text = jest.spyOn(
+      PDFDocument.prototype as PDFKit.PDFDocument,
+      'text',
+    );
+    try {
+      await renderReportPdf({
+        ...fixture,
+        evaluation: {
+          ...fixture.evaluation,
+          technical: 24,
+          communication: 27,
+          language: 21,
+          confidence: 30,
+          overall: 25.5,
+          rubricVersion: RUBRIC_VERSION,
+          rubricSnapshot: RUBRIC,
+          dimensionFeedback: Object.fromEntries(
+            RUBRIC.dimensions.map((d) => [
+              d.key,
+              'ตอบตรงคำถาม มีเหตุผลรองรับ แต่ยังเพิ่มตัวอย่างได้',
+            ]),
+          ),
+        },
+      });
+      for (const line of [
+        'คะแนนเฉลี่ยทั้ง 4 ด้าน 25.5 / 30 · เกรด A',
+        'ความถูกต้องและเนื้อหา: 24 / 30 · เกรด A',
+        'ความชัดเจน: 27 / 30 · เกรด A',
+        'การใช้ภาษา: 21 / 30 · เกรด B',
+        'การสื่อสารที่สะท้อนความมั่นใจ: 30 / 30 · เกรด A',
+      ])
+        expect(text).toHaveBeenCalledWith(line, { lineGap: 4 });
+    } finally {
+      text.mockRestore();
+    }
+  });
   it('produces PDF bytes with the bundled Thai font', async () => {
     const bytes = await renderReportPdf(fixture);
     expect(bytes.subarray(0, 5).toString()).toBe('%PDF-');

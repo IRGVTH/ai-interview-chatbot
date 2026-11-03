@@ -188,8 +188,13 @@ pnpm --filter @ai-interview/database exec prisma migrate deploy
 
 The report-rubric migration adds nullable language/reason/snapshot/source timestamp
 fields and preserves existing SRS columns if present. Historical scores are not
-rewritten. Re-score to produce interview-30-v1 evaluations with all four reasons.
-Each dimension is 0–10, weighted 25%; total = sum(dimensions) * 0.75 (max 30).
-The existing overall database field remains the four-dimension mean on 0–10 for
-compatibility; the API computes totalScore and grade. Only current 30-point
-results contribute to the new average. Deploy API and web together.
+rewritten. Re-score to produce interview-dimensions-30-v2 evaluations with all four reasons.
+Each of the four dimensions is scored directly on 0–30. The session average is
+sum(dimensions) / 4, also out of 30; for example 24, 27, 21, 30 average to 25.5/30 (A).
+The existing overall database field stores that /30 average for this rubric version;
+the API's totalScore field exposes the same average for client compatibility.
+Reports and PDF show every dimension /30, its reason and grade, and the session
+average /30 with a grade. Only current, complete v2 results contribute to the
+dashboard average. The old /10 rubrics (including interview-30-v1) stay historical
+and require re-evaluation; their numbers are never relabeled /30. No additional
+database migration is needed for this scoring correction. Deploy API and web together.

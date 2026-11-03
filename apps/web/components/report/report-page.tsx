@@ -10,6 +10,8 @@ import {
   isEvaluationCurrent,
   canDownloadEvaluation,
   applyNewEvaluation,
+  gradeFromTotalScore,
+  RUBRIC_VERSION,
   type Overview,
 } from "./report-data";
 function message(err: unknown) {
@@ -142,7 +144,9 @@ export function ReportPage() {
     <main className="space-y-6 text-black">
       <header>
         <h1 className="text-3xl font-bold">Interview Report</h1>
-        <p className="mt-2">คะแนนเต็ม 30 พร้อมเกณฑ์และเหตุผลแยกทั้ง 4 ด้าน</p>
+        <p className="mt-2">
+          ทั้ง 4 ด้านเต็มด้านละ 30 คะแนน พร้อมคะแนนเฉลี่ยเต็ม 30 และเกรด
+        </p>
       </header>
       {error && (
         <p role="alert" className="rounded-xl bg-red-50 p-4 text-red-700">
@@ -296,8 +300,9 @@ export function ReportPage() {
                 <>
                   {e.totalScore === null ? (
                     <p role="status" className="rounded-xl bg-amber-50 p-4">
-                      นี่คือผลประเมินเกณฑ์เดิมเต็ม 10 ยังไม่ใช่ผลจากเกณฑ์เต็ม 30
-                      การประเมินใหม่ที่สำเร็จจะแทนที่ผลนี้ด้วยคะแนนเต็ม 30
+                      {e.rubricVersion === RUBRIC_VERSION
+                        ? "ผลประเมินยังไม่ครบทั้ง 4 ด้าน กรุณาประเมินใหม่"
+                        : "นี่คือผลเกณฑ์เดิมที่แต่ละด้านเต็ม 10 กรุณาประเมินใหม่เพื่อให้ทั้ง 4 ด้านเต็มด้านละ 30 และคำนวณคะแนนเฉลี่ยใหม่"}
                     </p>
                   ) : (
                     !isEvaluationCurrent(session) && (
@@ -309,10 +314,14 @@ export function ReportPage() {
                   )}
                   <div className="flex flex-wrap items-center gap-6 rounded-xl bg-indigo-50 p-6">
                     <div>
-                      <p>เกรดผลการฝึก{e.totalScore === null ? "เดิม" : ""}</p>
+                      <p>
+                        เกรดจากคะแนนเฉลี่ย
+                        {e.rubricVersion !== RUBRIC_VERSION ? " (ผลเดิม)" : ""}
+                      </p>
                       <strong className="text-5xl">{e.grade ?? "—"}</strong>
                     </div>
                     <div>
+                      <p>คะแนนเฉลี่ยทั้ง 4 ด้าน</p>
                       <p className="text-3xl font-bold">
                         {e.displayScore ?? "—"} / {e.scoreMax}
                       </p>
@@ -321,8 +330,8 @@ export function ReportPage() {
                   </div>
                   <p className="text-sm">{data.gradeScale.description}</p>
                   <p className="text-sm">
-                    สูตรใหม่: (ผลรวมคะแนนดิบ 4 ด้าน ÷ 40) × 30
-                    แต่ละด้านมีน้ำหนัก 25% หรือสูงสุด 7.5 คะแนน
+                    สูตรใหม่: คะแนนเฉลี่ย = ผลรวมคะแนนทั้ง 4 ด้าน ÷ 4
+                    ทุกด้านเต็มด้านละ 30 คะแนน และคะแนนเฉลี่ยเต็ม 30
                   </p>
                   <div className="grid gap-4 lg:grid-cols-2">
                     {(
@@ -344,12 +353,11 @@ export function ReportPage() {
                           <h3 className="font-semibold">{d.label}</h3>
                           <p className="text-2xl font-bold">
                             {value ?? "ยังไม่ได้ประเมิน"}
-                            {value !== null ? " / 10" : ""}
+                            {value !== null ? ` / ${e.dimensionScoreMax}` : ""}
                           </p>
                           {value !== null && e.totalScore !== null && (
                             <p className="text-sm text-indigo-700">
-                              คิดเป็น {Number((value * 0.75).toFixed(2))} / 7.5
-                              คะแนน
+                              เกรด {gradeFromTotalScore(value) ?? "—"}
                             </p>
                           )}
                           <p className="text-sm text-gray-600">{d.criteria}</p>
@@ -378,7 +386,7 @@ export function ReportPage() {
                   </div>
                   <p className="text-sm text-gray-600">
                     คะแนนย่อยที่แสดงปัดเพื่ออ่านง่าย
-                    คะแนนรวมคำนวณจากคะแนนดิบโดยไม่ปัดระหว่างทาง
+                    คะแนนเฉลี่ยคำนวณจากคะแนนทั้ง 4 ด้านโดยไม่ปัดระหว่างทาง
                   </p>
                   <h3 className="font-semibold">ข้อเสนอแนะภาพรวม</h3>
                   <p className="whitespace-pre-wrap">{e.feedback}</p>

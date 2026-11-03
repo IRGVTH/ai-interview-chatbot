@@ -16,12 +16,12 @@ const reasons = Object.fromEntries(
 );
 const evaluation = {
   id: "e",
-  technical: 8,
-  communication: 8,
-  language: 8,
-  confidence: 8,
-  overall: 8,
-  rubricVersion: "interview-30-v1",
+  technical: 24,
+  communication: 27,
+  language: 21,
+  confidence: 30,
+  overall: 25.5,
+  rubricVersion: "interview-dimensions-30-v2",
   dimensionFeedback: reasons,
   evaluatedThrough: "2026-11-03T05:00:00Z",
   strengths: ["ชัดเจน"],
@@ -59,9 +59,9 @@ test("a persisted evaluation replaces the legacy result immediately and recomput
   });
   const after = applyNewEvaluation(before, "s", evaluation);
   assert.equal(before.sessions[0].evaluation.scoreMax, 10);
-  assert.equal(after.sessions[0].evaluation.displayScore, 24);
+  assert.equal(after.sessions[0].evaluation.displayScore, 25.5);
   assert.equal(after.sessions[0].evaluation.scoreMax, 30);
-  assert.equal(after.averageOverall, 24);
+  assert.equal(after.averageOverall, 25.5);
   assert.equal(canDownloadEvaluation(after.sessions[0]), true);
 });
 test("a legacy or incomplete POST response never reports a successful /30 evaluation", () => {
@@ -74,15 +74,20 @@ test("a legacy or incomplete POST response never reports a successful /30 evalua
   ]) {
     assert.throws(() => applyNewEvaluation(before, "s", response), /เต็ม 30/);
   }
-  assert.equal(before.sessions[0].evaluation.displayScore, 24);
+  assert.equal(before.sessions[0].evaluation.displayScore, 25.5);
 });
-test("four scores produce total 24/30, A, and downloadable current report", () => {
+test("four /30 scores produce average 25.5/30, A, and downloadable current report", () => {
   const d = normalizeOverview(input),
     e = d.sessions[0].evaluation;
-  assert.equal(e.totalScore, 24);
+  assert.equal(e.totalScore, 25.5);
   assert.equal(e.scoreMax, 30);
+  assert.equal(e.dimensionScoreMax, 30);
+  assert.deepEqual(
+    [e.technical, e.communication, e.language, e.confidence],
+    [24, 27, 21, 30],
+  );
   assert.equal(e.grade, "A");
-  assert.equal(d.averageOverall, 24);
+  assert.equal(d.averageOverall, 25.5);
   assert.equal(d.averageGrade, "A");
   assert.equal(canDownloadEvaluation(d.sessions[0]), true);
 });
@@ -95,6 +100,10 @@ test("historical results remain /10 without inventing a language score", () => {
         evaluation: {
           ...evaluation,
           rubricVersion: "legacy-v0",
+          technical: 9,
+          communication: 9,
+          confidence: 9,
+          overall: 9,
           language: null,
           dimensionFeedback: null,
         },
@@ -103,8 +112,76 @@ test("historical results remain /10 without inventing a language score", () => {
   });
   assert.equal(d.sessions[0].evaluation.totalScore, null);
   assert.equal(d.sessions[0].evaluation.scoreMax, 10);
+  assert.equal(d.sessions[0].evaluation.technical, 9);
+  assert.equal(d.sessions[0].evaluation.displayScore, 9);
   assert.equal(d.averageOverall, null);
   assert.equal(d.excludedEvaluations, 1);
+});
+test("each dimension and the session average can reach 30 without summing to 120", () => {
+  const d = normalizeOverview({
+    ...input,
+    sessions: [
+      {
+        ...session,
+        evaluation: {
+          ...evaluation,
+          technical: 30,
+          communication: 30,
+          language: 30,
+          confidence: 30,
+        },
+      },
+    ],
+  });
+  assert.equal(d.sessions[0].evaluation.displayScore, 30);
+  assert.equal(d.averageOverall, 30);
+  assert.equal(d.averageGrade, "A");
+});
+test("dashboard averages session means on the same /30 scale", () => {
+  const d = normalizeOverview({
+    ...input,
+    sessions: [
+      session,
+      {
+        ...session,
+        id: "s2",
+        evaluation: {
+          ...evaluation,
+          technical: 18,
+          communication: 18,
+          language: 18,
+          confidence: 18,
+        },
+      },
+    ],
+  });
+  assert.equal(d.averageOverall, 21.75);
+  assert.equal(d.averageGrade, "B");
+});
+test("the old interview-30-v1 dimension scores are never relabeled as /30", () => {
+  const d = normalizeOverview({
+    ...input,
+    sessions: [
+      {
+        ...session,
+        evaluation: {
+          ...evaluation,
+          rubricVersion: "interview-30-v1",
+          technical: 8,
+          communication: 8,
+          language: 8,
+          confidence: 8,
+          overall: 8,
+        },
+      },
+    ],
+  });
+  const e = d.sessions[0].evaluation;
+  assert.equal(e.dimensionScoreMax, 10);
+  assert.equal(e.technical, 8);
+  assert.equal(e.totalScore, null);
+  assert.equal(d.averageOverall, null);
+  assert.equal(canDownloadEvaluation(d.sessions[0]), true);
 });
 test("conversation changes exclude scores and disable new PDF", () => {
   const d = normalizeOverview({
@@ -158,7 +235,7 @@ test("zero remains a valid F rather than missing", () => {
   assert.equal(d.averageGrade, "F");
 });
 test("invalid scores cannot become valid grades", () => {
-  for (const technical of [null, "8", -1, 11, NaN])
+  for (const technical of [null, "8", -1, 31, NaN])
     assert.equal(
       normalizeOverview({
         ...input,

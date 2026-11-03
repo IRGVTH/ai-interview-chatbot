@@ -37,7 +37,8 @@ export class ReportController {
     }
     const e = session.evaluation;
     if (
-      e.rubricVersion === RUBRIC_VERSION &&
+      (e.rubricVersion === RUBRIC_VERSION ||
+        e.rubricVersion === 'interview-30-v1') &&
       session.lastMessageAt &&
       (!e.evaluatedThrough || e.evaluatedThrough < session.lastMessageAt)
     ) {

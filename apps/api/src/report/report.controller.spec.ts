@@ -100,7 +100,7 @@ describe('Report PDF endpoint', () => {
       lastMessageAt: new Date('2026-11-03T05:01:00Z'),
       evaluation: {
         ...sample.evaluation,
-        rubricVersion: 'interview-30-v1',
+        rubricVersion: 'interview-dimensions-30-v2',
         evaluatedThrough: new Date('2026-11-03T05:00:00Z'),
       },
     });

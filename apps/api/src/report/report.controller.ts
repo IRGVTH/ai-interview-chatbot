@@ -1,4 +1,15 @@
-import { Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import { Response } from 'express';
+import { renderReportPdf } from './report-pdf';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AuthenticatedRequest } from '../common/types/authenticated-request';
 import { ReportService } from './report.service';
@@ -7,6 +18,26 @@ import { ReportService } from './report.service';
 @UseGuards(JwtAuthGuard)
 export class ReportController {
   constructor(private readonly reportService: ReportService) {}
+
+  @Get('sessions/:id/pdf')
+  async pdf(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const session = await this.reportService.getSessionReport(req.user.id, id);
+    if (!session.evaluation) {
+      throw new BadRequestException('กรุณาประเมินคะแนนก่อนดาวน์โหลด PDF');
+    }
+    const bytes = await renderReportPdf(session);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="interview-report.pdf"',
+    );
+    res.setHeader('Cache-Control', 'no-store');
+    res.send(bytes);
+  }
 
   @Get('overview')
   getOverview(@Req() req: AuthenticatedRequest) {

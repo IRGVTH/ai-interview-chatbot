@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
+import { fetchReportPdf, saveReportPdf } from "@/lib/report-pdf";
 
 type Interview = {
   id: string;
@@ -79,6 +80,7 @@ export function ReportPage() {
   const [data, setData] = useState<ReportOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [evaluatingId, setEvaluatingId] = useState<string>("");
+  const [downloadingId, setDownloadingId] = useState("");
   const [error, setError] = useState("");
 
   const token = useMemo(() => {
@@ -163,6 +165,25 @@ export function ReportPage() {
     }
   }
 
+  async function downloadPdf(sessionId: string) {
+    if (!token || downloadingId || evaluatingId) return;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!apiUrl) {
+      setError("ยังไม่ได้ตั้งค่า API URL");
+      return;
+    }
+    setDownloadingId(sessionId);
+    setError("");
+    try {
+      const blob = await fetchReportPdf(apiUrl, sessionId, token);
+      saveReportPdf(blob, sessionId);
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "ดาวน์โหลด PDF ไม่สำเร็จ กรุณาลองใหม่"));
+    } finally {
+      setDownloadingId("");
+    }
+  }
+
   if (loading || !data) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
@@ -186,7 +207,9 @@ export function ReportPage() {
       <div className="mx-auto max-w-6xl space-y-6">
         <section className="rounded-3xl bg-white p-6 shadow-sm">
           <p className="text-sm text-black md:text-gray-500">Progress report</p>
-          <h1 className="mt-1 text-3xl font-bold text-black">Interview Report</h1>
+          <h1 className="mt-1 text-3xl font-bold text-black">
+            Interview Report
+          </h1>
           <p className="mt-2 text-black md:text-gray-600">
             Track your practice and generate AI-based scoring for each session.
           </p>
@@ -226,21 +249,48 @@ export function ReportPage() {
                           {session.title || "Practice Chat"}
                         </h3>
                         <p className="mt-1 text-sm text-black md:text-gray-500">
-                          {session.interview.position} • {session.interview.difficulty}
+                          {session.interview.position} •{" "}
+                          {session.interview.difficulty}
                         </p>
                       </div>
 
                       <button
                         onClick={() => generateScore(session.id)}
-                        disabled={evaluatingId === session.id}
+                        disabled={!!evaluatingId || !!downloadingId}
                         className="rounded-xl bg-black px-4 py-2 text-sm text-white disabled:opacity-50"
                       >
                         {evaluatingId === session.id
                           ? "Scoring..."
                           : session.evaluation
-                          ? "Re-score"
-                          : "Generate score"}
+                            ? "Re-score"
+                            : "Generate score"}
                       </button>
+                    </div>
+
+                    <div className="mt-4">
+                      <button
+                        type="button"
+                        onClick={() => downloadPdf(session.id)}
+                        disabled={
+                          !session.evaluation ||
+                          !!evaluatingId ||
+                          !!downloadingId
+                        }
+                        aria-describedby={`pdf-note-${session.id}`}
+                        className="rounded-xl border border-gray-300 px-4 py-2 text-sm text-black disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {downloadingId === session.id
+                          ? "กำลังดาวน์โหลด…"
+                          : "ดาวน์โหลด PDF"}
+                      </button>
+                      <p
+                        id={`pdf-note-${session.id}`}
+                        className="mt-2 text-sm text-gray-600"
+                      >
+                        {session.evaluation
+                          ? "ดาวน์โหลดผลประเมินที่บันทึกไว้ หากตอบเพิ่มแล้ว ให้กด Re-score ก่อนเพื่ออัปเดตคะแนน"
+                          : "กด Generate score เพื่อประเมินก่อนดาวน์โหลด PDF"}
+                      </p>
                     </div>
 
                     {session.evaluation ? (
@@ -257,7 +307,10 @@ export function ReportPage() {
                           label="Confidence"
                           value={session.evaluation.confidence}
                         />
-                        <MiniStat label="Overall" value={session.evaluation.overall} />
+                        <MiniStat
+                          label="Overall"
+                          value={session.evaluation.overall}
+                        />
                       </div>
                     ) : (
                       <p className="mt-4 text-sm text-black md:text-gray-500">
@@ -271,7 +324,9 @@ export function ReportPage() {
           </div>
 
           <div className="rounded-3xl bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-semibold text-black">Latest Evaluation</h2>
+            <h2 className="text-xl font-semibold text-black">
+              Latest Evaluation
+            </h2>
             <p className="text-sm text-black md:text-gray-500">
               Summary from Gemini scoring
             </p>

@@ -149,7 +149,7 @@ export function InterviewPage() {
       const created = await apiFetch<Interview>("/interviews", {
         method: "POST",
         token,
-        body: form,
+        body: { ...form, summary: form.summary.trim() || undefined },
       });
 
       setInterviews((prev) => [created, ...prev]);

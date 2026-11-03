@@ -29,6 +29,5 @@ export class CreateInterviewDto {
 
   @IsOptional()
   @IsString()
-  @MinLength(2)
   summary?: string;
 }

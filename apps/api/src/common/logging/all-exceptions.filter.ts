@@ -19,7 +19,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const status =
       exception instanceof HttpException ? exception.getStatus() : 500;
 
-    const message =
+    const details =
       exception instanceof HttpException
         ? exception.getResponse()
         : 'Internal server error';
@@ -29,9 +29,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
       exception instanceof Error ? exception.stack : undefined,
     );
 
-    response.status(status).json({
-      statusCode: status,
-      message,
-    });
+    // Keep Nest's message/code/error fields at the top level. Wrapping
+    // getResponse() in `message` hides the provider error from chat clients.
+    const payload =
+      typeof details === 'string' ? { message: details } : details;
+    response.status(status).json({ ...payload, statusCode: status });
   }
 }

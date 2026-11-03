@@ -59,7 +59,21 @@ GOOGLE_CALLBACK_URL="http://localhost:4000/auth/google/callback"
 FRONTEND_URL="http://localhost:3000"
 PORT=4000
 GEMINI_API_KEY="your-gemini-api-key"
+GEMINI_MODEL="gemini-3.1-flash-lite"
+GEMINI_FALLBACK_MODELS="gemini-3.8-flash"
 ```
+
+`GEMINI_MODEL` and `GEMINI_FALLBACK_MODELS` are optional server-side settings.
+The fallback setting accepts comma-separated model IDs; an empty value disables
+fallbacks. Choose models available to the API key's Google AI project.
+Restart/redeploy the **API service** after changing these values (a Vercel frontend
+redeploy alone does not update the backend).
+
+If Start practice fails, check the API response code: `GEMINI_CONFIGURATION_ERROR`
+means the administrator should verify the key, API permissions, billing, and request
+configuration; `GEMINI_QUOTA_EXCEEDED` means quota/billing is exhausted;
+`GEMINI_MODEL_UNAVAILABLE` means none of the configured models could be found.
+Do not put the Gemini key in `NEXT_PUBLIC_*` variables or commit it to GitHub.
 
 ### Web
 
